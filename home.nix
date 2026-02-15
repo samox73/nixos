@@ -2,6 +2,44 @@
   home.stateVersion = "25.11";
 
   programs = {
+    alacritty = {
+      enable = true;
+      settings = {
+        font = {
+          normal = {
+            family = "JetBrainsMonoNL Nerd Font Mono";
+          };
+          size = 11.0;
+        };
+        colors = {
+          primary = {
+            background = "#2d353b";
+            foreground = "#d3c6aa";
+          };
+          normal = {
+            black = "#475258";
+            red = "#e67e80";
+            green = "#a7c080";
+            yellow = "#dbbc7f";
+            blue = "#7fbbb3";
+            magenta = "#d699b6";
+            cyan = "#83c092";
+            white = "#d3c6aa";
+          };
+          bright = {
+            black = "#475258";
+            red = "#e67e80";
+            green = "#a7c080";
+            yellow = "#dbbc7f";
+            blue = "#7fbbb3";
+            magenta = "#d699b6";
+            cyan = "#83c092";
+            white = "#d3c6aa";
+          };
+        };
+      };
+    };
+
     git = {
       enable = true;
       settings = {
@@ -12,6 +50,8 @@
         alias = {
           s = "status";
         };
+        credential.helper = "!${pkgs.gh}/bin/gh auth git-credential";
+        init.defaultBranch = "main";
       };
     };
 
@@ -21,13 +61,39 @@
       viAlias = true;
       vimAlias = true;
     };
+
+    yazi = {
+      enable = true;
+      settings = {
+        preview = {
+          image_filter = "lanczos3";
+          image_quality = 90;
+          tab_size = 1;
+          max_width = 600;
+          max_height = 900;
+          cache_dir = "";
+          ueberzug_scale = 1;
+          ueberzug_offset = [
+            0
+            0
+            0
+            0
+          ];
+        };
+      };
+    };
+
+    zoxide.enable = true;
+    nushell = {
+      enable = true;
+    };
   };
 
   home.packages = with pkgs; [
-    alacritty
     claude-code
     firefox
     grim
+    gh
     rofi
     swayidle
     swaylock
@@ -43,21 +109,170 @@
     imagemagick
     mcp-nixos
     texliveFull
-    pavucontrol  # for waybar pulseaudio right-click
+    pavucontrol           # for waybar pulseaudio right-click
+    ueberzugpp            # for image previews in yazi file browser
+    sway-contrib.grimshot # for easier screenshots in wayland
+    wl-color-picker
 
     # Neovim dependencies
     ripgrep      # for telescope live_grep
     fd           # for telescope find_files
     gcc          # for treesitter compilation
+    tree-sitter  # treesitter CLI
     nodejs       # for some LSP servers
     curl         # for mason package downloads
     wget         # for mason package downloads
     unzip        # for mason package extraction
     gzip         # for mason package extraction
+    texpresso    # live rendering latex
+
+    font-awesome  # for waybar icons
+    nerd-fonts.commit-mono
+    nerd-fonts.symbols-only
+    nerd-fonts.jetbrains-mono
   ];
+
+  fonts.fontconfig = {
+    enable = true;
+    antialiasing = true;
+  };
+
+  xdg.configFile."rofi/config.rasi".text = ''
+    configuration {
+     timeout {
+      action: "kb-cancel";
+      delay: 15;
+     }
+    }
+    @theme "hack"
+  '';
+
+  xdg.configFile."rofi/themes/colors.rasi".text = ''
+    * {
+      al: #00000000;
+      bg: #2D353BFF;
+      sfg: #000000ff;
+      sbg: #89818326;
+      fg: #d3c6aaff;
+    }
+  '';
+
+  xdg.configFile."rofi/themes/hack.rasi".text = ''
+    @import "colors.rasi"
+
+    configuration {
+     font: "Iosevka Nerd Font 10";
+     show-icons: true;
+     icon-theme: "Numix";
+     display-drun: "";
+     drun-display-format: "{name}";
+     disable-history: false;
+     fullscreen: false;
+     hide-scrollbar: true;
+     sidebar-mode: false;
+    }
+
+    window {
+     transparency: "real";
+     background-color: @bg;
+     text-color: @fg;
+     border: 2px;
+     border-color: @fg;
+     border-radius: 0px;
+     width: 800px;
+     height: 430px;
+     location: center;
+     x-offset: 0;
+     y-offset: 0;
+    }
+
+    prompt {
+     enabled: true;
+     padding: 10px;
+     background-color: @al;
+     text-color: @fg;
+     font: "Iosevka Nerd Font 10";
+    }
+
+    entry {
+     background-color: @al;
+     text-color: @fg;
+     placeholder-color: @fg;
+     expand: true;
+     horizontal-align: 0;
+     placeholder: "Search...";
+     padding: 10px 10px 10px 0px;
+     border-radius: 0px;
+     blink: true;
+    }
+
+    inputbar {
+     children: [ prompt, entry ];
+     background-color: @al;
+     text-color: @fg;
+     expand: false;
+     border: 0px 0px 1px 0px;
+     border-radius: 0px;
+     border-color: @fg;
+     spacing: 0px;
+    }
+
+    listview {
+     background-color: @al;
+     padding: 0px;
+     columns: 1;
+     lines: 5;
+     spacing: 5px;
+     cycle: true;
+     dynamic: true;
+     layout: vertical;
+    }
+
+    mainbox {
+     background-color: @al;
+     border: 0px;
+     border-radius: 0px;
+     border-color: @fg;
+     children: [ inputbar, listview ];
+     spacing: 10px;
+     padding: 2px 10px 10px 10px;
+    }
+
+    element {
+     background-color: @al;
+     text-color: @fg;
+     orientation: horizontal;
+     border-radius: 0px;
+     padding: 8px;
+    }
+
+    element-icon {
+     size: 24px;
+     border: 0px;
+     background-color: @al;
+    }
+
+    element-text {
+     expand: true;
+     horizontal-align: 0;
+     vertical-align: 0.5;
+     text-color: @fg;
+     background-color: @al;
+     margin: 0px 2.5px 0px 2.5px;
+    }
+
+    element selected {
+     background-color: @sbg;
+     text-color: @sfg;
+     border: 1px;
+     border-radius: 0px;
+     border-color: @fg;
+    }
+  '';
 
   wayland.windowManager.sway = {
     enable = true;
+    checkConfig = false;
     config = let
       mod = "Mod1";
       left = "h";
@@ -87,7 +302,7 @@
 
       colors = {
         focused = {
-          border = "#dce6cc";
+          border = "#A7C080";
           background = "#dce6cc";
           text = "#fdf6e3";
           indicator = "#dce6cc";
@@ -101,7 +316,7 @@
           childBorder = "#A7C080";
         };
         unfocused = {
-          border = "#A7C080";
+          border = "#556a35";
           background = "#073642";
           text = "#93a1a1";
           indicator = "#A7C080";
@@ -213,7 +428,7 @@
         "${mod}+r" = "mode resize";
 
         # Applications
-        "${mod}+i" = "exec firefox -P work";
+        "${mod}+i" = "exec firefox -P private";
         "${mod}+Shift+i" = "exec firefox -P private";
         "${mod}+e" = "exec GTK_THEME=Adwaita-dark evolution";
         "${mod}+f" = "exec grimshot copy area";
@@ -254,7 +469,8 @@
 
       output = {
         "*" = {
-          # bg = "~/work/repos/everforest-walls/nature/polyscape_2.png fill";
+          # bg = "/home/samox/wallpapers/everforest_walls/nature/forest_stairs.jpg fill";
+          bg = "/home/samox/wallpapers/everforest_walls/nature/mist_forest_2.png fill";
         };
       };
     };
@@ -304,21 +520,21 @@
           format-plugged = "{icon} {capacity}%";
           format-charging = "{icon} {capacity}%";
           format = "{icon} {capacity}%";
-          format-icons = [ "" "" "" "" "" "" "" "" "" "" ];
+          format-icons = [ "󰂎" "󰁺" "󰁻" "󰁼" "󰁽" "󰁾" "󰁿" "󰂀" "󰂁" "󰂂" "󰁹" ];
         };
 
         clock = {
-          format = " {:%a %b %d %H:%M:%S}";
+          format = "󰥔 {:%a %b %d %H:%M:%S}";
           tooltip = false;
           max-length = 25;
           interval = 1;
         };
 
         network = {
-          format-wifi = " {essid} {ipaddr}";
-          format-ethernet = " {ipaddr}";
-          format-linked = " {ifname}";
-          format-disconnected = " Disconnected";
+          format-wifi = "󰖩 {essid} {ipaddr}";
+          format-ethernet = "󰈀 {ipaddr}";
+          format-linked = "󰈀 {ifname}";
+          format-disconnected = "󰖪 Disconnected";
           tooltip = false;
           max-length = 30;
         };
@@ -330,9 +546,9 @@
           format-bluetooth = "{icon} {volume}%";
           format-muted = "MUTE";
           format-icons = {
-            headphone = "";
-            headset = "";
-            default = [ "" "" "" ];
+            headphone = "󰋋";
+            headset = "󰋎";
+            default = [ "󰕿" "󰖀" "󰕾" ];
           };
           on-click = "pamixer -t";
           on-click-right = "pavucontrol";
@@ -341,7 +557,7 @@
         cpu = {
           interval = 4;
           min-length = 6;
-          format = " {usage}%";
+          format = " {usage}%";
           tooltip = false;
           states = {
             critical = 90;
@@ -355,13 +571,13 @@
           format = "{icon} {temperatureC}°C";
           format-critical = "{icon} {temperatureC}°C";
           format-icons = {
-            default = [ "" "" "" "" "" ];
+            default = [ "󱃃" "󰔏" "󱃂" "󰸁" "󰔐" ];
           };
         };
 
         memory = {
           tooltip = false;
-          format = " {percentage}%";
+          format = "󰍛 {percentage}%";
           states = {
             critical = 90;
           };
@@ -373,7 +589,7 @@
           path = "/";
           interval = 60;
           min-length = 5;
-          format = " {percentage_used}%";
+          format = "󰋊 {percentage_used}%";
           states = {
             critical = 90;
           };
@@ -415,7 +631,7 @@
       #waybar {
         color: @fgcolor;
         background: transparent;
-        font-family: JetBrainsMono;
+        font-family: "JetBrainsMonoNL Nerd Font Mono";
         font-size: 12px;
         border-bottom: 1px solid @bordercolor;
         background-color: @bgcolor;
