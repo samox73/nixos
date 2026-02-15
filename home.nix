@@ -524,7 +524,7 @@
         };
 
         clock = {
-          format = "󰥔 {:%a %b %d %H:%M:%S}";
+          format = "{:%a %b %d %H:%M:%S}";
           tooltip = false;
           max-length = 25;
           interval = 1;
@@ -632,7 +632,7 @@
         color: @fgcolor;
         background: transparent;
         font-family: "JetBrainsMonoNL Nerd Font Mono";
-        font-size: 12px;
+        font-size: 13px;
         border-bottom: 1px solid @bordercolor;
         background-color: @bgcolor;
       }
