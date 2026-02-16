@@ -469,7 +469,6 @@
 
       output = {
         "*" = {
-          # bg = "/home/samox/wallpapers/everforest_walls/nature/forest_stairs.jpg fill";
           bg = "/home/samox/wallpapers/everforest_walls/nature/mist_forest_2.png fill";
         };
       };
