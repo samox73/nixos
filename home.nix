@@ -1,4 +1,6 @@
-{ pkgs, ... }: {
+{ pkgs, ags, astal, ... }: {
+  imports = [ ags.homeManagerModules.default ];
+
   home.stateVersion = "25.11";
 
   programs = {
@@ -87,6 +89,17 @@
     nushell = {
       enable = true;
     };
+
+    ags = {
+      enable = true;
+      configDir = null;  # already exists at ~/.config/ags
+      extraPackages = with astal.packages.${pkgs.system}; [
+        hyprland
+        battery
+        wireplumber
+        network
+      ];
+    };
   };
 
   home.packages = with pkgs; [
@@ -113,14 +126,6 @@
     ueberzugpp            # for image previews in yazi file browser
     sway-contrib.grimshot # for easier screenshots in wayland
     wl-color-picker
-    ags                   # bar for hyprland (new Astal version)
-    astal.io              # Astal core library
-    astal.astal3          # Astal GTK3 widgets
-    astal.hyprland        # Hyprland integration
-    astal.battery         # Battery monitoring
-    astal.wireplumber     # Audio control
-    astal.network         # Network monitoring
-
     # Neovim dependencies
     ripgrep      # for telescope live_grep
     fd           # for telescope find_files
@@ -517,7 +522,7 @@
 
       # Startup applications
       exec-once = [
-        "ags run"
+        "ags run --gtk 3"
         "swayidle"
       ];
 
