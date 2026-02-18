@@ -91,6 +91,9 @@
       enable = true;
       wrapperFeatures.gtk = true;
     };
+    hyprland = {
+      enable = true;
+    };
     git = {
       enable = true;
     };

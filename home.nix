@@ -113,6 +113,7 @@
     ueberzugpp            # for image previews in yazi file browser
     sway-contrib.grimshot # for easier screenshots in wayland
     wl-color-picker
+    ags                   # bar for hyprland
 
     # Neovim dependencies
     ripgrep      # for telescope live_grep
@@ -151,6 +152,144 @@
     enable = true;
     antialiasing = true;
   };
+
+  xdg.configFile."ags/config.js".text = ''
+    const hyprland = await Service.import("hyprland")
+    const battery = await Service.import("battery")
+    const audio = await Service.import("audio")
+    const network = await Service.import("network")
+
+    const date = Variable("", {
+        poll: [1000, 'date "+%a %b %d %H:%M:%S"'],
+    })
+
+    // Workspaces
+    const Workspaces = () => Widget.Box({
+        class_name: 'workspaces',
+        children: Array.from({ length: 10 }, (_, i) => i + 1).map(i => Widget.Button({
+            attribute: i,
+            label: `''${i}`,
+            on_clicked: () => hyprland.messageAsync(`dispatch workspace ''${i}`),
+            setup: self => self.hook(hyprland, () => {
+                self.toggleClassName("focused", hyprland.active.workspace.id === i)
+            }),
+        })),
+    })
+
+    // Clock
+    const Clock = () => Widget.Label({
+        class_name: 'clock',
+        label: date.bind(),
+    })
+
+    // Battery
+    const Battery = () => Widget.Label({
+        class_name: 'battery',
+        label: battery.bind('percent').as(p => `󰁹 ''${p}%`),
+    })
+
+    // CPU (using simpler command)
+    const Cpu = () => Widget.Label({
+        class_name: 'cpu',
+        label: ' --',
+    })
+
+    // Memory (using simpler command)
+    const Memory = () => Widget.Label({
+        class_name: 'memory',
+        label: '󰍛 --',
+    })
+
+    // Volume
+    const Volume = () => Widget.Label({
+        class_name: 'volume',
+        label: audio.speaker.bind('volume').as(v => {
+            const vol = Math.round(v * 100)
+            if (audio.speaker.is_muted) return 'MUTE'
+            return `󰕾 ''${vol}%`
+        }),
+    })
+
+    // Network
+    const Network = () => Widget.Label({
+        class_name: 'network',
+        label: network.wifi.bind('ssid').as(ssid =>
+            network.wifi.internet === 'connected'
+                ? `󰖩 ''${ssid}`
+                : '󰖪 Disconnected'
+        ),
+    })
+
+    // Main bar
+    const Bar = (monitor = 0) => Widget.Window({
+        name: `bar-''${monitor}`,
+        class_name: 'bar',
+        monitor,
+        anchor: ['top', 'left', 'right'],
+        exclusivity: 'exclusive',
+        child: Widget.CenterBox({
+            start_widget: Widget.Box({
+                spacing: 8,
+                children: [
+                    Cpu(),
+                    Memory(),
+                    Battery(),
+                    Volume(),
+                ],
+            }),
+            center_widget: Widget.Box({
+                spacing: 8,
+                children: [
+                    Workspaces(),
+                ],
+            }),
+            end_widget: Widget.Box({
+                spacing: 8,
+                children: [
+                    Network(),
+                    Clock(),
+                ],
+            }),
+        }),
+    })
+
+    App.config({
+        style: App.configDir + "/style.css",
+        windows: [
+            Bar(),
+        ],
+    })
+  '';
+
+  xdg.configFile."ags/style.css".text = ''
+    * {
+        font-family: "JetBrainsMonoNL Nerd Font Mono";
+        font-size: 13px;
+    }
+
+    window.bar {
+        background-color: #2D353B;
+        color: #D3C6AA;
+        border-bottom: 1px solid #A7C080;
+        padding: 4px 10px;
+    }
+
+    .workspaces button {
+        padding: 0 10px;
+        color: #D3C6AA;
+        background-color: transparent;
+        border: none;
+    }
+
+    .workspaces button.focused {
+        color: #ffaec5;
+    }
+
+    .cpu, .memory, .battery, .volume, .network, .clock {
+        padding: 0 10px;
+        color: #D3C6AA;
+    }
+  '';
 
   xdg.configFile."rofi/config.rasi".text = ''
     configuration {
@@ -500,6 +639,175 @@
     #   exec_always dunst
     #   exec_always pkill kanshi; kanshi
     # '';
+  };
+
+  wayland.windowManager.hyprland = {
+    enable = true;
+    settings = {
+      # Monitor configuration
+      monitor = ",preferred,auto,1";
+
+      # Startup applications
+      exec-once = [
+        "ags"
+        "swayidle"
+      ];
+
+      # Input configuration
+      input = {
+        kb_layout = "us,de";
+        kb_options = "grp:caps_toggle";
+        repeat_delay = 200;
+        repeat_rate = 100;
+
+        touchpad = {
+          natural_scroll = true;
+          scroll_factor = 1.0;
+        };
+      };
+
+      # General settings
+      general = {
+        gaps_in = 10;
+        gaps_out = 0;
+        border_size = 1;
+        "col.active_border" = "rgb(dce6cc)";
+        "col.inactive_border" = "rgb(556a35)";
+        layout = "dwindle";
+      };
+
+      # Decoration
+      decoration = {
+        rounding = 0;
+      };
+
+      # Animations (Hyprland's main feature)
+      animations = {
+        enabled = true;
+        bezier = "myBezier, 0.05, 0.9, 0.1, 1.05";
+        animation = [
+          "windows, 1, 7, myBezier"
+          "windowsOut, 1, 7, default, popin 80%"
+          "border, 1, 10, default"
+          "fade, 1, 7, default"
+          "workspaces, 1, 6, default"
+        ];
+      };
+
+      # Dwindle layout (similar to Sway's default)
+      dwindle = {
+        pseudotile = true;
+        preserve_split = true;
+      };
+
+      # Window rules
+      windowrulev2 = [
+        "bordercolor rgb(dce6cc),focus:1"
+        "bordercolor rgb(556a35),focus:0"
+      ];
+
+      # Keybindings - using ALT (Mod1) to match your Sway config
+      "$mod" = "ALT";
+
+      bind = [
+        # Terminal
+        "$mod, Return, exec, alacritty"
+
+        # Window management
+        "$mod, Q, killactive,"
+
+        # Focus
+        "$mod, h, movefocus, l"
+        "$mod, j, movefocus, d"
+        "$mod, k, movefocus, u"
+        "$mod, l, movefocus, r"
+
+        # Move windows
+        "$mod SHIFT, h, movewindow, l"
+        "$mod SHIFT, j, movewindow, d"
+        "$mod SHIFT, k, movewindow, u"
+        "$mod SHIFT, l, movewindow, r"
+        "$mod SHIFT, Left, movewindow, l"
+        "$mod SHIFT, Down, movewindow, d"
+        "$mod SHIFT, Up, movewindow, u"
+        "$mod SHIFT, Right, movewindow, r"
+
+        # Move workspace between monitors
+        "$mod CTRL SHIFT, Right, movecurrentworkspacetomonitor, r"
+        "$mod CTRL SHIFT, Left, movecurrentworkspacetomonitor, l"
+
+        # Launchers
+        "$mod, space, exec, rofi -modi combi -show combi -combi-modi drun,run -no-levenshtein-sort"
+
+        # Layout
+        "$mod, b, layoutmsg, preselect l"
+        "$mod, v, layoutmsg, preselect d"
+        "$mod SHIFT, f, fullscreen, 0"
+        "$mod SHIFT, space, togglefloating,"
+
+        # Scratchpad (special workspace in Hyprland)
+        "$mod SHIFT, p, movetoworkspace, special"
+        "$mod, p, togglespecialworkspace,"
+
+        # Workspaces
+        "$mod, 1, workspace, 1"
+        "$mod, 2, workspace, 2"
+        "$mod, 3, workspace, 3"
+        "$mod, 4, workspace, 4"
+        "$mod, 5, workspace, 5"
+        "$mod, 6, workspace, 6"
+        "$mod, 7, workspace, 7"
+        "$mod, 8, workspace, 8"
+        "$mod, 9, workspace, 9"
+        "$mod, 0, workspace, 10"
+
+        # Move to workspace
+        "$mod SHIFT, 1, movetoworkspace, 1"
+        "$mod SHIFT, 2, movetoworkspace, 2"
+        "$mod SHIFT, 3, movetoworkspace, 3"
+        "$mod SHIFT, 4, movetoworkspace, 4"
+        "$mod SHIFT, 5, movetoworkspace, 5"
+        "$mod SHIFT, 6, movetoworkspace, 6"
+        "$mod SHIFT, 7, movetoworkspace, 7"
+        "$mod SHIFT, 8, movetoworkspace, 8"
+        "$mod SHIFT, 9, movetoworkspace, 9"
+        "$mod SHIFT, 0, movetoworkspace, 10"
+
+        # Config reload
+        "$mod SHIFT CTRL, r, exec, hyprctl reload"
+
+        # Applications
+        "$mod, i, exec, firefox -P private"
+        "$mod SHIFT, i, exec, firefox -P private"
+        "$mod, e, exec, GTK_THEME=Adwaita-dark evolution"
+        "$mod, f, exec, grimshot copy area"
+        "$mod, c, exec, grim -g \"$(slurp -p)\" -t ppm - | convert - -format '%[pixel:p{0,0}]' txt:- | tail -n 1 | cut -d ' ' -f 4 | tr -d '\\n' | wl-copy"
+
+        # Lock screen
+        "CTRL SHIFT, F8, exec, swaylock"
+
+        # Brightness
+        ", XF86MonBrightnessUp, exec, brightnessctl s +10%"
+        ", XF86MonBrightnessDown, exec, brightnessctl s 10%-"
+
+        # Media keys
+        ", XF86AudioNext, exec, playerctl next"
+        ", XF86AudioPrev, exec, playerctl previous"
+        "SUPER, p, exec, dbus-send --print-reply --dest=org.mpris.MediaPlayer2.spotify /org/mpris/MediaPlayer2 org.mpris.MediaPlayer2.Player.PlayPause"
+      ];
+
+      # Volume control (bindl for locked screen support)
+      bindl = [
+        ", XF86AudioRaiseVolume, exec, pamixer -i 1"
+        ", XF86AudioLowerVolume, exec, pamixer -d 1"
+      ];
+
+      # Mouse bindings
+      bindm = [
+        "$mod, mouse:272, movewindow"
+        "$mod, mouse:273, resizewindow"
+      ];
+    };
   };
 
   programs.waybar = {
