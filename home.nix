@@ -126,6 +126,21 @@
     gzip         # for mason package extraction
     texpresso    # live rendering latex
 
+    # C++ development tools
+    cmake        # build system
+    gnumake      # make command
+    pkg-config   # for finding libraries
+
+    # OpenGL/Graphics libraries
+    libGL        # OpenGL library
+    libGLU       # OpenGL utility library
+    freeglut     # GLUT library
+    glew         # GLEW library
+    opencv       # OpenCV library
+    xorg.libX11  # X11 library
+    xorg.libXi   # X11 input extension
+    xorg.libXmu  # X11 miscellaneous utilities
+
     font-awesome  # for waybar icons
     nerd-fonts.commit-mono
     nerd-fonts.symbols-only
