@@ -113,7 +113,13 @@
     ueberzugpp            # for image previews in yazi file browser
     sway-contrib.grimshot # for easier screenshots in wayland
     wl-color-picker
-    ags                   # bar for hyprland
+    ags                   # bar for hyprland (new Astal version)
+    astal.io              # Astal core library
+    astal.astal3          # Astal GTK3 widgets
+    astal.hyprland        # Hyprland integration
+    astal.battery         # Battery monitoring
+    astal.wireplumber     # Audio control
+    astal.network         # Network monitoring
 
     # Neovim dependencies
     ripgrep      # for telescope live_grep
@@ -152,144 +158,6 @@
     enable = true;
     antialiasing = true;
   };
-
-  xdg.configFile."ags/config.js".text = ''
-    const hyprland = await Service.import("hyprland")
-    const battery = await Service.import("battery")
-    const audio = await Service.import("audio")
-    const network = await Service.import("network")
-
-    const date = Variable("", {
-        poll: [1000, 'date "+%a %b %d %H:%M:%S"'],
-    })
-
-    // Workspaces
-    const Workspaces = () => Widget.Box({
-        class_name: 'workspaces',
-        children: Array.from({ length: 10 }, (_, i) => i + 1).map(i => Widget.Button({
-            attribute: i,
-            label: `''${i}`,
-            on_clicked: () => hyprland.messageAsync(`dispatch workspace ''${i}`),
-            setup: self => self.hook(hyprland, () => {
-                self.toggleClassName("focused", hyprland.active.workspace.id === i)
-            }),
-        })),
-    })
-
-    // Clock
-    const Clock = () => Widget.Label({
-        class_name: 'clock',
-        label: date.bind(),
-    })
-
-    // Battery
-    const Battery = () => Widget.Label({
-        class_name: 'battery',
-        label: battery.bind('percent').as(p => `󰁹 ''${p}%`),
-    })
-
-    // CPU (using simpler command)
-    const Cpu = () => Widget.Label({
-        class_name: 'cpu',
-        label: ' --',
-    })
-
-    // Memory (using simpler command)
-    const Memory = () => Widget.Label({
-        class_name: 'memory',
-        label: '󰍛 --',
-    })
-
-    // Volume
-    const Volume = () => Widget.Label({
-        class_name: 'volume',
-        label: audio.speaker.bind('volume').as(v => {
-            const vol = Math.round(v * 100)
-            if (audio.speaker.is_muted) return 'MUTE'
-            return `󰕾 ''${vol}%`
-        }),
-    })
-
-    // Network
-    const Network = () => Widget.Label({
-        class_name: 'network',
-        label: network.wifi.bind('ssid').as(ssid =>
-            network.wifi.internet === 'connected'
-                ? `󰖩 ''${ssid}`
-                : '󰖪 Disconnected'
-        ),
-    })
-
-    // Main bar
-    const Bar = (monitor = 0) => Widget.Window({
-        name: `bar-''${monitor}`,
-        class_name: 'bar',
-        monitor,
-        anchor: ['top', 'left', 'right'],
-        exclusivity: 'exclusive',
-        child: Widget.CenterBox({
-            start_widget: Widget.Box({
-                spacing: 8,
-                children: [
-                    Cpu(),
-                    Memory(),
-                    Battery(),
-                    Volume(),
-                ],
-            }),
-            center_widget: Widget.Box({
-                spacing: 8,
-                children: [
-                    Workspaces(),
-                ],
-            }),
-            end_widget: Widget.Box({
-                spacing: 8,
-                children: [
-                    Network(),
-                    Clock(),
-                ],
-            }),
-        }),
-    })
-
-    App.config({
-        style: App.configDir + "/style.css",
-        windows: [
-            Bar(),
-        ],
-    })
-  '';
-
-  xdg.configFile."ags/style.css".text = ''
-    * {
-        font-family: "JetBrainsMonoNL Nerd Font Mono";
-        font-size: 13px;
-    }
-
-    window.bar {
-        background-color: #2D353B;
-        color: #D3C6AA;
-        border-bottom: 1px solid #A7C080;
-        padding: 4px 10px;
-    }
-
-    .workspaces button {
-        padding: 0 10px;
-        color: #D3C6AA;
-        background-color: transparent;
-        border: none;
-    }
-
-    .workspaces button.focused {
-        color: #ffaec5;
-    }
-
-    .cpu, .memory, .battery, .volume, .network, .clock {
-        padding: 0 10px;
-        color: #D3C6AA;
-    }
-  '';
 
   xdg.configFile."rofi/config.rasi".text = ''
     configuration {
@@ -649,7 +517,7 @@
 
       # Startup applications
       exec-once = [
-        "ags"
+        "ags run"
         "swayidle"
       ];
 
@@ -818,10 +686,10 @@
         layer = "top";
         position = "top";
         modules-left = [ "cpu" "temperature" "memory" "battery" "disk" "pulseaudio" ];
-        modules-center = [ "sway/mode" "sway/workspaces" "sway/mode" ];
+        modules-center = [ "hyprland/workspaces" ];
         modules-right = [ "custom/weather" "network" "clock" ];
 
-        "sway/window" = {};
+        "hyprland/window" = {};
 
         "custom/weather" = {
           tooltip = false;
@@ -917,13 +785,9 @@
           };
         };
 
-        "sway/workspaces" = {
+        "hyprland/workspaces" = {
           tooltip = false;
           disable-scroll = true;
-        };
-
-        "sway/mode" = {
-          format = "{}";
         };
       };
     };
