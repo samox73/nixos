@@ -128,10 +128,12 @@
     ueberzugpp            # for image previews in yazi file browser
     sway-contrib.grimshot # for easier screenshots in wayland
     wl-color-picker
+    hyprpicker
     obs-studio
     slack
     everforest-gtk-theme
     everforest-cursors
+    nautilus              # GTK file manager
 
     # Screensharing dependencies
     pipewire
@@ -680,7 +682,7 @@
         "$mod, i, exec, firefox -P private"
         "$mod SHIFT, i, exec, firefox -P private"
         "$mod, e, exec, GTK_THEME=Adwaita-dark evolution"
-        "$mod, f, exec, grimshot copy area"
+        "$mod, f, exec, hyprpicker -a"
         "$mod, c, exec, grim -g \"$(slurp -p)\" -t ppm - | convert - -format '%[pixel:p{0,0}]' txt:- | tail -n 1 | cut -d ' ' -f 4 | tr -d '\\n' | wl-copy"
 
         # Lock screen
