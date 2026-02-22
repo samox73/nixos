@@ -1,4 +1,4 @@
-{ pkgs, ags, astal, ... }: {
+{ pkgs, ags, astal, pkgs-unstable, ... }: {
   imports = [ ags.homeManagerModules.default ];
 
   home.stateVersion = "25.11";
@@ -103,8 +103,10 @@
   };
 
   home.packages = with pkgs; [
-    claude-code
+    pkgs-unstable.claude-code
     firefox
+    spotify
+    whatsapp-electron
     grim
     gh
     rofi
@@ -126,6 +128,13 @@
     ueberzugpp            # for image previews in yazi file browser
     sway-contrib.grimshot # for easier screenshots in wayland
     wl-color-picker
+    obs-studio
+    slack
+
+    # Screensharing dependencies
+    pipewire
+    wireplumber
+
     # Neovim dependencies
     ripgrep      # for telescope live_grep
     fd           # for telescope find_files
@@ -518,12 +527,29 @@
     enable = true;
     settings = {
       # Monitor configuration
-      monitor = ",preferred,auto,1";
+      monitor = [
+        "HDMI-A-1,1920x1080@75,0x180,1"          # Acer on the left
+        "DP-1,2560x1440@240,1920x0,1"          # Samsung on the right
+      ];
 
       # Startup applications
       exec-once = [
         "ags run --gtk 3"
-        "swayidle"
+      ];
+
+      # Workspace to monitor bindings
+      # Odd workspaces on Samsung (DP-1), even on Acer (HDMI-A-1)
+      workspace = [
+        "1, monitor:DP-1"
+        "2, monitor:HDMI-A-1"
+        "3, monitor:DP-1"
+        "4, monitor:HDMI-A-1"
+        "5, monitor:DP-1"
+        "6, monitor:HDMI-A-1"
+        "7, monitor:DP-1"
+        "8, monitor:HDMI-A-1"
+        "9, monitor:DP-1"
+        "10, monitor:HDMI-A-1"
       ];
 
       # Input configuration
@@ -541,8 +567,8 @@
 
       # General settings
       general = {
-        gaps_in = 10;
-        gaps_out = 0;
+        gaps_in = 5;
+        gaps_out = 10;
         border_size = 1;
         "col.active_border" = "rgb(dce6cc)";
         "col.inactive_border" = "rgb(556a35)";
@@ -557,13 +583,12 @@
       # Animations (Hyprland's main feature)
       animations = {
         enabled = true;
-        bezier = "myBezier, 0.05, 0.9, 0.1, 1.05";
+        bezier = "myBezier, 0.37, 0, 0.63, 1.00";
         animation = [
-          "windows, 1, 7, myBezier"
-          "windowsOut, 1, 7, default, popin 80%"
-          "border, 1, 10, default"
-          "fade, 1, 7, default"
-          "workspaces, 1, 6, default"
+          "windows, 1, 1, default"
+          "border, 1, 2, default"
+          "fade, 1, 1, default"
+          "workspaces, 1, 2, default, slidefade 10%"
         ];
       };
 
@@ -691,10 +716,10 @@
         layer = "top";
         position = "top";
         modules-left = [ "cpu" "temperature" "memory" "battery" "disk" "pulseaudio" ];
-        modules-center = [ "hyprland/workspaces" ];
+        modules-center = [ "sway/mode" "sway/workspaces" "sway/mode" ];
         modules-right = [ "custom/weather" "network" "clock" ];
 
-        "hyprland/window" = {};
+        "sway/window" = {};
 
         "custom/weather" = {
           tooltip = false;
@@ -790,9 +815,13 @@
           };
         };
 
-        "hyprland/workspaces" = {
+        "sway/workspaces" = {
           tooltip = false;
           disable-scroll = true;
+        };
+
+        "sway/mode" = {
+          format = "{}";
         };
       };
     };
