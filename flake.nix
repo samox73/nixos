@@ -19,10 +19,30 @@
         inherit system;
         config.allowUnfree = true;
       };
+      overlay-everforest = final: prev: {
+        everforest-gtk-theme = prev.everforest-gtk-theme.overrideAttrs (old: {
+          version = "0-unstable-2025-10-23";
+          src = final.fetchFromGitHub {
+            owner = "Fausto-Korpsvart";
+            repo = "Everforest-GTK-Theme";
+            rev = "9b8be4d6648ae9eaae3dd550105081f8c9054825";
+            hash = "sha256-XHO6NoXJwwZ8gBzZV/hJnVq5BvkEKYWvqLBQT00dGdE=";
+          };
+          nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ final.sassc ];
+          installPhase = ''
+            runHook preInstall
+            mkdir -p "$out/share/"{themes,icons}
+            cp -a icons/* "$out/share/icons/"
+            bash themes/install.sh --name Everforest --dest "$out/share/themes" --tweaks medium outline -c dark
+            runHook postInstall
+          '';
+        });
+      };
     in {
     nixosConfigurations.nexus = nixpkgs.lib.nixosSystem {
       inherit system;
       modules = [
+        { nixpkgs.overlays = [ overlay-everforest ]; }
         ./configuration.nix
 	home-manager.nixosModules.home-manager
 	{

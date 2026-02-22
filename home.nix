@@ -130,6 +130,8 @@
     wl-color-picker
     obs-studio
     slack
+    everforest-gtk-theme
+    everforest-cursors
 
     # Screensharing dependencies
     pipewire
@@ -999,4 +1001,37 @@
       }
     '';
   };
+
+  gtk = {
+    enable = true;
+
+    iconTheme = {
+      name = "everforest-cursors";
+      package = pkgs.everforest-cursors;
+    };
+
+    theme = {
+      name = "Everforest-Dark-Medium";
+      package = pkgs.everforest-gtk-theme;
+    };
+
+    cursorTheme = {
+      name = "everforest-cursors";
+      package = pkgs.everforest-cursors;
+    };
+
+    gtk3.extraConfig = {
+      Settings = ''
+        gtk-application-prefer-dark-theme=1
+      '';
+    };
+
+    gtk4.extraConfig = {
+      Settings = ''
+        gtk-application-prefer-dark-theme=1
+      '';
+    };
+  };
+
+  home.sessionVariables.GTK_THEME = "Everforest-Dark-Medium";
 }
