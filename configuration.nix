@@ -17,6 +17,7 @@
 
   # Use latest kernel.
   boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelModules = [ "usb-storage" ];
 
   # Enable hibernation
   boot.resumeDevice = "/dev/disk/by-uuid/e19d076a-d3e1-4031-8ad3-cb81085e4499";
@@ -100,6 +101,9 @@
   };
 
   # List services that you want to enable:
+
+  services.udisks2.enable = true;
+  services.gvfs.enable = true;
 
   services.greetd = {
     enable = true;
