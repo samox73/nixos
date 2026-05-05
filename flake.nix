@@ -43,13 +43,34 @@
       inherit system;
       modules = [
         { nixpkgs.overlays = [ overlay-everforest ]; }
+        ./hardware-configuration-nexus.nix
         ./configuration.nix
+        { networking.hostName = "nexus";
+          boot.resumeDevice = "/dev/disk/by-uuid/e19d076a-d3e1-4031-8ad3-cb81085e4499";
+        }
 	home-manager.nixosModules.home-manager
 	{
 	  home-manager.useGlobalPkgs = true;
 	  home-manager.useUserPackages = true;
 	  home-manager.users.samox = import ./home.nix;
-	  home-manager.extraSpecialArgs = { inherit ags astal pkgs-unstable; };
+	  home-manager.extraSpecialArgs = { inherit ags astal pkgs-unstable; hostname = "nexus"; };
+	}
+      ];
+    };
+
+    nixosConfigurations.umbreon = nixpkgs.lib.nixosSystem {
+      inherit system;
+      modules = [
+        { nixpkgs.overlays = [ overlay-everforest ]; }
+        ./hardware-configuration-umbreon.nix
+        ./configuration.nix
+        { networking.hostName = "umbreon"; }
+	home-manager.nixosModules.home-manager
+	{
+	  home-manager.useGlobalPkgs = true;
+	  home-manager.useUserPackages = true;
+	  home-manager.users.samox = import ./home.nix;
+	  home-manager.extraSpecialArgs = { inherit ags astal pkgs-unstable; hostname = "umbreon"; };
 	}
       ];
     };

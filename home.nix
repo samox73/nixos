@@ -1,4 +1,4 @@
-{ pkgs, ags, astal, pkgs-unstable, ... }: {
+{ pkgs, ags, astal, pkgs-unstable, hostname, ... }: {
   imports = [ ags.homeManagerModules.default ];
 
   home.stateVersion = "25.11";
@@ -7,6 +7,11 @@
     alacritty = {
       enable = true;
       settings = {
+        window = {
+          padding = {
+            x = 10;
+          };
+        };
         font = {
           normal = {
             family = "JetBrainsMonoNL Nerd Font Mono";
@@ -88,6 +93,8 @@
     zoxide.enable = true;
     nushell = {
       enable = true;
+      configFile.source = ./config.nu;
+      envFile.source = ./env.nu;
     };
 
     ags = {
@@ -114,6 +121,7 @@
     swaylock
     zathura
     slurp
+    hyprshot
     wl-clipboard
     clipman
     dunst
@@ -151,10 +159,31 @@
     gzip         # for mason package extraction
     texpresso    # live rendering latex
 
+    # Go development
+    go
+    gopls        # Go LSP server
+    delve        # Go debugger
+    gotools      # goimports, etc.
+
+    # Python development
+    python3
+    python3Packages.pip
+    python3Packages.virtualenv
+    pyright      # Python LSP server
+
+    # Rust development
+    rustc
+    cargo
+    rust-analyzer  # Rust LSP server
+    rustfmt        # Rust formatter
+    clippy         # Rust linter
+
     # C++ development tools
     cmake        # build system
     gnumake      # make command
     pkg-config   # for finding libraries
+    clang-tools  # clangd LSP, clang-format, clang-tidy
+    gdb          # debugger
 
     # OpenGL/Graphics libraries
     libGL        # OpenGL library
@@ -472,7 +501,7 @@
         "${mod}+Shift+i" = "exec firefox -P private";
         "${mod}+e" = "exec GTK_THEME=Adwaita-dark evolution";
         "${mod}+f" = "exec grimshot copy area";
-        "${mod}+c" = "exec grim -g \"$(slurp -p)\" -t ppm - | convert - -format '%[pixel:p{0,0}]' txt:- | tail -n 1 | cut -d ' ' -f 4 | tr -d '\\n' | wl-copy";
+        "${mod}+c" = "exec hyprshot -m region --clipboard-only";
 
         # Media keys
         "XF86AudioRaiseVolume" = "exec pamixer -i 1";
@@ -531,14 +560,17 @@
     enable = true;
     settings = {
       # Monitor configuration
-      monitor = [
+      monitor = if hostname == "nexus" then [
         "HDMI-A-1,1920x1080@75,0x180,1"          # Acer on the left
-        "DP-1,2560x1440@240,1920x0,1"          # Samsung on the right
+        "DP-1,2560x1440@240,1920x0,1"            # Samsung on the right
+      ] else [
+        "desc:Lenovo Group Limited P40w-20,5120x2160@60,0x0,1.25"  # Lenovo P40w-20 ultrawide
+        "eDP-1,1920x1200@60,4096x0,1"                            # Laptop screen to the right
       ];
 
       # Startup applications
       exec-once = [
-        "ags run --gtk 3"
+        "waybar"
       ];
 
       # Workspace to monitor bindings
@@ -576,7 +608,7 @@
         border_size = 1;
         "col.active_border" = "rgb(dce6cc)";
         "col.inactive_border" = "rgb(556a35)";
-        layout = "dwindle";
+        layout = "master";
       };
 
       # Decoration
@@ -596,10 +628,11 @@
         ];
       };
 
-      # Dwindle layout (similar to Sway's default)
-      dwindle = {
-        pseudotile = true;
-        preserve_split = true;
+      # Master layout
+      master = {
+        new_status = "slave";
+        orientation = "center";
+        mfact = 0.5;
       };
 
       # Window rules
@@ -623,6 +656,10 @@
         "$mod, j, movefocus, d"
         "$mod, k, movefocus, u"
         "$mod, l, movefocus, r"
+        "$mod, period, focusmonitor, +1"
+        "$mod, comma, focusmonitor, -1"
+        "$mod SHIFT, period, movewindow, mon:+1"
+        "$mod SHIFT, comma, movewindow, mon:-1"
 
         # Move windows
         "$mod SHIFT, h, movewindow, l"
@@ -642,10 +679,16 @@
         "$mod, space, exec, rofi -modi combi -show combi -combi-modi drun,run -no-levenshtein-sort"
 
         # Layout
-        "$mod, b, layoutmsg, preselect l"
-        "$mod, v, layoutmsg, preselect d"
+        "$mod, m, layoutmsg, focusmaster"
+        "$mod SHIFT, m, layoutmsg, swapwithmaster, auto"
         "$mod SHIFT, f, fullscreen, 0"
         "$mod SHIFT, space, togglefloating,"
+
+        # Groups (tabbed containers)
+        "$mod, g, togglegroup,"
+        "$mod, TAB, changegroupactive, f"
+        "$mod SHIFT, TAB, changegroupactive, b"
+        "$mod SHIFT, g, moveoutofgroup,"
 
         # Scratchpad (special workspace in Hyprland)
         "$mod SHIFT, p, movetoworkspace, special"
@@ -679,7 +722,7 @@
         "$mod SHIFT CTRL, r, exec, hyprctl reload"
 
         # Applications
-        "$mod, i, exec, firefox -P private"
+        "$mod, i, exec, firefox -P uni"
         "$mod SHIFT, i, exec, firefox -P private"
         "$mod, e, exec, GTK_THEME=Adwaita-dark evolution"
         "$mod, f, exec, hyprpicker -a"
@@ -720,10 +763,14 @@
         layer = "top";
         position = "top";
         modules-left = [ "cpu" "temperature" "memory" "battery" "disk" "pulseaudio" ];
-        modules-center = [ "sway/mode" "sway/workspaces" "sway/mode" ];
+        modules-center = [ "hyprland/workspaces" ];
         modules-right = [ "custom/weather" "network" "clock" ];
 
-        "sway/window" = {};
+        "hyprland/workspaces" = {
+          format = "{id}";
+          on-click = "activate";
+          sort-by-number = true;
+        };
 
         "custom/weather" = {
           tooltip = false;
@@ -819,14 +866,6 @@
           };
         };
 
-        "sway/workspaces" = {
-          tooltip = false;
-          disable-scroll = true;
-        };
-
-        "sway/mode" = {
-          format = "{}";
-        };
       };
     };
 
@@ -876,7 +915,7 @@
         text-shadow: inherit;
       }
 
-      #workspaces button.focused {
+      #workspaces button.active {
         color: @fgcolor2;
         background: @bgcolor;
       }
@@ -993,14 +1032,6 @@
         animation-direction: alternate;
       }
 
-      #mode {
-        background-color: #FF0000;
-        margin: 2px;
-        padding: 0px 100px;
-        color: white;
-        font-variant: small-caps;
-        font-size: 15pt;
-      }
     '';
   };
 
