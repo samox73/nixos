@@ -39,8 +39,8 @@
 
       # Input configuration
       input = {
-        kb_layout = "us,de";
-        kb_options = "grp:caps_toggle";
+        kb_layout = "us";
+        kb_options = "compose:caps";
         repeat_delay = 200;
         repeat_rate = 100;
 
@@ -134,6 +134,7 @@
         # Layout
         "$mod, m, layoutmsg, focusmaster"
         "$mod SHIFT, m, layoutmsg, swapwithmaster"
+        "$mod, n, exec, hyprctl --batch 'dispatch layoutmsg swapwithmaster child ; dispatch layoutmsg cyclenext'"
         "$mod SHIFT, f, fullscreen, 0"
         "$mod SHIFT, space, togglefloating,"
 
