@@ -7,8 +7,8 @@
         "HDMI-A-1,1920x1080@75,0x180,1"          # Acer on the left
         "DP-1,2560x1440@240,1920x0,1"            # Samsung on the right
       ] else [
-        "desc:Lenovo Group Limited P40w-20,5120x2160@60,0x0,1.25"  # Lenovo P40w-20 ultrawide
-        "eDP-1,1920x1200@60,4096x0,1"                            # Laptop screen to the right
+        "eDP-1,1920x1200@60,0x0,1"                                  # Laptop screen on the left
+        "desc:Lenovo Group Limited P40w-20,5120x2160@60,1920x0,1.25"  # Lenovo P40w-20 ultrawide on the right
       ];
 
       # Environment variables
@@ -18,8 +18,10 @@
 
       # Startup applications
       exec-once = [
+        "eww daemon"
         "waybar"
         "swaybg -i /home/samox/wallpapers/nature/mist_forest_2.png -m fill"
+        "mkdir -p /home/samox/gdrive && rclone mount gdrive: /home/samox/gdrive --vfs-cache-mode full"
       ];
 
       # Workspace to monitor bindings
@@ -130,7 +132,6 @@
 
         # Launchers
         "$mod, space, exec, rofi -modi combi -show combi -combi-modi drun,run -no-levenshtein-sort"
-
         # Layout
         "$mod, m, layoutmsg, focusmaster"
         "$mod SHIFT, m, layoutmsg, swapwithmaster"
@@ -203,5 +204,25 @@
         "$mod, mouse:273, resizewindow"
       ];
     };
+
+    extraConfig = ''
+      $close_hints = eww close submap-hints
+
+      bind = ALT, s, exec, eww update submap_name='Sioyek' submap_keys='[{"key":"b","desc":"Open mark"},{"key":"B","desc":"Open mark (new window)"},{"key":"u","desc":"Update mark to current position"},{"key":"d","desc":"Delete mark"}]' && eww open submap-hints --screen "$(hyprctl monitors -j | jq '.[] | select(.focused==true) | .id')"
+      bind = ALT, s, submap, sioyek
+
+      submap = sioyek
+      bind = , b, exec, $close_hints; ~/.config/sioyek/open-mark.sh
+      bind = , b, submap, reset
+      bind = SHIFT, b, exec, $close_hints; ~/.config/sioyek/open-mark.sh --new-window
+      bind = SHIFT, b, submap, reset
+      bind = , u, exec, $close_hints; ~/.config/sioyek/update-mark.sh
+      bind = , u, submap, reset
+      bind = , d, exec, $close_hints; ~/.config/sioyek/delete-mark.sh
+      bind = , d, submap, reset
+      bind = , Escape, exec, $close_hints
+      bind = , Escape, submap, reset
+      submap = reset
+    '';
   };
 }
