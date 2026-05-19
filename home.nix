@@ -76,13 +76,15 @@
     everforest-cursors
     eww                  # widget system for submap hints
     jq                   # JSON processing
-    sqlite               # for sioyek mark lookup script
+    sqlite               # for sioyek bookmark lookup script
     bat                  # syntax-highlighted cat
     fzf                  # fuzzy finder
     darktable            # RAW photo editor with Nikon NEF support
     gphoto2              # transfer photos from Nikon camera via USB
     nautilus              # GTK file manager
     rclone                # mount Google Drive as local directory
+    obsidian             # markdown editor
+    pandoc               # conversion between document formats
 
     # Screensharing dependencies
     pipewire
@@ -142,6 +144,25 @@
     nerd-fonts.jetbrains-mono
   ];
 
+  xdg.configFile."hypr/move-windows.nu" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env nu
+
+      def main [] {
+        let current_ws = (hyprctl activeworkspace -j | from json | get id)
+        let options = (1..10 | where { $in != $current_ws } | each { $in | into string } | str join "\n")
+        let target = (try { $options | rofi -dmenu -p $"Move WS ($current_ws) →" -i | str trim } catch { "" })
+        if $target == "" { return }
+
+        let windows = (hyprctl clients -j | from json | where { $in.workspace.id == $current_ws })
+        for win in $windows {
+          hyprctl dispatch movetoworkspacesilent $"($target),address:($win.address)"
+        }
+      }
+    '';
+  };
+
   xdg.configFile."eww/eww.yuck".text = ''
     (defvar submap_name "")
     (defvar submap_keys '[{"key": "", "desc": ""}]')
@@ -200,102 +221,124 @@
     }
   '';
 
-  xdg.configFile."sioyek/open-mark.sh" = {
+  xdg.configFile."sioyek/open-bookmark.nu" = {
     executable = true;
     text = ''
-      #!/usr/bin/env bash
-      SHARED="''${XDG_DATA_HOME:-$HOME/.local/share}/sioyek/shared.db"
-      LOCAL="''${XDG_DATA_HOME:-$HOME/.local/share}/sioyek/local.db"
-      [ -f "$SHARED" ] && [ -f "$LOCAL" ] || exit 0
+      #!/usr/bin/env nu
 
-      MARKS=$(sqlite3 -separator $'\t' "$SHARED" "
-        ATTACH '$LOCAL' AS local_db;
-        SELECT m.symbol, h.path
-        FROM marks m
-        JOIN local_db.document_hash h ON m.document_path = h.hash
-        ORDER BY m.symbol;
-      ")
-      [ -z "$MARKS" ] && exit 0
+      def main [--new-window] {
+        let data_home = ($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")
+        let shared = $"($data_home)/sioyek/shared.db"
+        let local_db = $"($data_home)/sioyek/local.db"
+        if not ($shared | path exists) or not ($local_db | path exists) { return }
 
-      DISPLAY=""
-      while IFS=$'\t' read -r sym path; do
-        fname=$(basename "$path" .pdf)
-        DISPLAY+="$sym  →  $fname"$'\n'
-      done <<< "$MARKS"
+        let sql = ("ATTACH '" + $local_db + "' AS local_db;
+          SELECT b.desc, b.document_path, b.offset_y, h.path,
+                 COALESCE(ob.zoom_level, 2.5) as zoom_level
+          FROM bookmarks b
+          JOIN local_db.document_hash h ON b.document_path = h.hash
+          LEFT JOIN opened_books ob ON ob.path = h.path
+          ORDER BY b.desc;")
 
-      SELECTED=$(echo -n "$DISPLAY" | rofi -dmenu -p "Marks" -i)
-      [ -z "$SELECTED" ] && exit 0
+        let bookmarks = (sqlite3 -separator "\t" $shared $sql
+          | lines | where { $in != "" }
+          | split column "\t" desc doc_hash offset_y path zoom_level
+          | where {|b| $b.path | str trim | path exists })
 
-      SYMBOL=$(echo "$SELECTED" | awk '{print $1}')
-      DOC_PATH=$(echo "$MARKS" | grep "^''${SYMBOL}"$'\t' | cut -f2)
+        if ($bookmarks | is-empty) { return }
 
-      SIOYEK_ARGS=()
-      [[ "$1" == "--new-window" ]] && SIOYEK_ARGS+=(--new-window)
-      sioyek "''${SIOYEK_ARGS[@]}" "$DOC_PATH" &
-      sleep 0.5
-      sioyek --execute-command goto_mark --execute-command-data "$SYMBOL"
+        let display = ($bookmarks
+          | each {|b| $"($b.desc)  →  ($b.path | path basename | str replace '.pdf' "")"}
+          | str join "\n")
+
+        let idx = (try { $display | rofi -dmenu -p "Bookmarks" -i -format i | str trim } catch { "" })
+        if $idx == "" or $idx == "-1" { return }
+
+        let selected = ($bookmarks | get ($idx | into int))
+        let doc_path = ($selected.path | str trim)
+        let doc_hash = ($selected.doc_hash | str trim)
+        let offset_y = ($selected.offset_y | str trim)
+        let zoom = ($selected.zoom_level | str trim)
+
+        # Write a temporary mark at the bookmark's position
+        let sql_mark = ("INSERT OR REPLACE INTO marks (document_path, symbol, offset_x, offset_y, zoom_level) VALUES ('" + $doc_hash + "', '~', 0, " + $offset_y + ", " + $zoom + ");")
+        sqlite3 $shared $sql_mark
+
+        if $new_window {
+          bash -c 'sioyek --new-window "$1" --execute-command goto_mark --execute-command-data "~" &' _ $doc_path
+        } else {
+          bash -c 'sioyek "$1" --execute-command goto_mark --execute-command-data "~" &' _ $doc_path
+        }
+      }
     '';
   };
 
-  xdg.configFile."sioyek/update-mark.sh" = {
+  xdg.configFile."sioyek/update-bookmark.nu" = {
     executable = true;
     text = ''
-      #!/usr/bin/env bash
-      SHARED="''${XDG_DATA_HOME:-$HOME/.local/share}/sioyek/shared.db"
-      LOCAL="''${XDG_DATA_HOME:-$HOME/.local/share}/sioyek/local.db"
-      [ -f "$SHARED" ] && [ -f "$LOCAL" ] || exit 0
+      #!/usr/bin/env nu
 
-      MARKS=$(sqlite3 -separator $'\t' "$SHARED" "
-        ATTACH '$LOCAL' AS local_db;
-        SELECT m.symbol, h.path
-        FROM marks m
-        JOIN local_db.document_hash h ON m.document_path = h.hash
-        ORDER BY m.symbol;
-      ")
-      [ -z "$MARKS" ] && exit 0
+      def main [] {
+        let data_home = ($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")
+        let shared = $"($data_home)/sioyek/shared.db"
+        let local_db = $"($data_home)/sioyek/local.db"
+        if not ($shared | path exists) or not ($local_db | path exists) { return }
 
-      DISPLAY=""
-      while IFS=$'\t' read -r sym path; do
-        fname=$(basename "$path" .pdf)
-        DISPLAY+="$sym  →  $fname"$'\n'
-      done <<< "$MARKS"
+        let bookmarks = (sqlite3 -separator "\t" $shared $"ATTACH '($local_db)' AS local_db;
+          SELECT b.desc, b.document_path, h.path FROM bookmarks b
+          JOIN local_db.document_hash h ON b.document_path = h.hash
+          ORDER BY b.desc;"
+          | lines | where { $in != "" } | split column "\t" desc doc_hash path)
 
-      SELECTED=$(echo -n "$DISPLAY" | rofi -dmenu -p "Update mark" -i)
-      [ -z "$SELECTED" ] && exit 0
+        if ($bookmarks | is-empty) { return }
 
-      SYMBOL=$(echo "$SELECTED" | awk '{print $1}')
-      sioyek --execute-command set_mark --execute-command-data "$SYMBOL"
+        let display = ($bookmarks
+          | each {|b| $"($b.desc)  →  ($b.path | path basename | str replace '.pdf' "")"}
+          | str join "\n")
+
+        let idx = (try { $display | rofi -dmenu -p "Update bookmark" -i -format i | str trim } catch { "" })
+        if $idx == "" or $idx == "-1" { return }
+
+        let selected = ($bookmarks | get ($idx | into int))
+        let desc_escaped = ($selected.desc | str replace -a "'" "''''")
+
+        sqlite3 $shared $"DELETE FROM bookmarks WHERE desc='($desc_escaped)' AND document_path='($selected.doc_hash)';"
+        sioyek --execute-command add_bookmark --execute-command-data $selected.desc
+      }
     '';
   };
 
-  xdg.configFile."sioyek/delete-mark.sh" = {
+  xdg.configFile."sioyek/delete-bookmark.nu" = {
     executable = true;
     text = ''
-      #!/usr/bin/env bash
-      SHARED="''${XDG_DATA_HOME:-$HOME/.local/share}/sioyek/shared.db"
-      LOCAL="''${XDG_DATA_HOME:-$HOME/.local/share}/sioyek/local.db"
-      [ -f "$SHARED" ] && [ -f "$LOCAL" ] || exit 0
+      #!/usr/bin/env nu
 
-      MARKS=$(sqlite3 -separator $'\t' "$SHARED" "
-        ATTACH '$LOCAL' AS local_db;
-        SELECT m.symbol, h.path
-        FROM marks m
-        JOIN local_db.document_hash h ON m.document_path = h.hash
-        ORDER BY m.symbol;
-      ")
-      [ -z "$MARKS" ] && exit 0
+      def main [] {
+        let data_home = ($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")
+        let shared = $"($data_home)/sioyek/shared.db"
+        let local_db = $"($data_home)/sioyek/local.db"
+        if not ($shared | path exists) or not ($local_db | path exists) { return }
 
-      DISPLAY=""
-      while IFS=$'\t' read -r sym path; do
-        fname=$(basename "$path" .pdf)
-        DISPLAY+="$sym  →  $fname"$'\n'
-      done <<< "$MARKS"
+        let bookmarks = (sqlite3 -separator "\t" $shared $"ATTACH '($local_db)' AS local_db;
+          SELECT b.desc, b.document_path, h.path FROM bookmarks b
+          JOIN local_db.document_hash h ON b.document_path = h.hash
+          ORDER BY b.desc;"
+          | lines | where { $in != "" } | split column "\t" desc doc_hash path)
 
-      SELECTED=$(echo -n "$DISPLAY" | rofi -dmenu -p "Delete mark" -i)
-      [ -z "$SELECTED" ] && exit 0
+        if ($bookmarks | is-empty) { return }
 
-      SYMBOL=$(echo "$SELECTED" | awk '{print $1}')
-      sqlite3 "$SHARED" "DELETE FROM marks WHERE symbol='$SYMBOL';"
+        let display = ($bookmarks
+          | each {|b| $"($b.desc)  →  ($b.path | path basename | str replace '.pdf' "")"}
+          | str join "\n")
+
+        let idx = (try { $display | rofi -dmenu -p "Delete bookmark" -i -format i | str trim } catch { "" })
+        if $idx == "" or $idx == "-1" { return }
+
+        let selected = ($bookmarks | get ($idx | into int))
+        let desc_escaped = ($selected.desc | str replace -a "'" "''''")
+
+        sqlite3 $shared $"DELETE FROM bookmarks WHERE desc='($desc_escaped)' AND document_path='($selected.doc_hash)';"
+      }
     '';
   };
 

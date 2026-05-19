@@ -1,6 +1,7 @@
-{ hostname, ... }: {
+{ hostname, pkgs-unstable, ... }: {
   wayland.windowManager.hyprland = {
     enable = true;
+    package = pkgs-unstable.hyprland;
     settings = {
       # Monitor configuration
       monitor = if hostname == "nexus" then [
@@ -71,6 +72,22 @@
         rounding = 0;
       };
 
+      # Group bar
+      group = {
+        groupbar = {
+          "col.active" = "rgba(556a357f)";
+          "col.inactive" = "rgba(2a35187f)";
+          text_color = "rgb(dce6cc)";
+          gradients = true;
+          keep_upper_gap = false;
+          gaps_in = 0;
+          gaps_out = 0;
+          font_size = 11;
+          height = 18;
+          blur = true;
+        };
+      };
+
       # Animations (Hyprland's main feature)
       animations = {
         enabled = true;
@@ -127,14 +144,13 @@
         "$mod SHIFT, Right, movewindow, r"
 
         # Move workspace between monitors
-        "$mod CTRL SHIFT, Right, movecurrentworkspacetomonitor, r"
-        "$mod CTRL SHIFT, Left, movecurrentworkspacetomonitor, l"
+        "$mod CTRL SHIFT, l, movecurrentworkspacetomonitor, r"
+        "$mod CTRL SHIFT, h, movecurrentworkspacetomonitor, l"
 
         # Launchers
         "$mod, space, exec, rofi -modi combi -show combi -combi-modi drun,run -no-levenshtein-sort"
         # Layout
-        "$mod, m, layoutmsg, focusmaster"
-        "$mod SHIFT, m, layoutmsg, swapwithmaster"
+        "$mod, m, layoutmsg, swapwithmaster"
         "$mod, n, exec, hyprctl --batch 'dispatch layoutmsg swapwithmaster child ; dispatch layoutmsg cyclenext'"
         "$mod SHIFT, f, fullscreen, 0"
         "$mod SHIFT, space, togglefloating,"
@@ -180,7 +196,7 @@
         "$mod, c, exec, hyprshot -m region --clipboard-only"
 
         # Lock screen
-        "CTRL SHIFT, F8, exec, swaylock"
+        "CTRL SHIFT, F8, exec, swaylock -f && systemctl suspend"
 
         # Brightness
         ", XF86MonBrightnessUp, exec, brightnessctl s +10%"
@@ -190,6 +206,9 @@
         ", XF86AudioNext, exec, playerctl next"
         ", XF86AudioPrev, exec, playerctl previous"
         "$mod, p, exec, playerctl -p spotify play-pause"
+
+        # Move all windows from current workspace to another
+        "$mod SHIFT, w, exec, ~/.config/hypr/move-windows.nu"
       ];
 
       # Volume control (bindl for locked screen support)
@@ -208,17 +227,17 @@
     extraConfig = ''
       $close_hints = eww close submap-hints
 
-      bind = ALT, s, exec, eww update submap_name='Sioyek' submap_keys='[{"key":"b","desc":"Open mark"},{"key":"B","desc":"Open mark (new window)"},{"key":"u","desc":"Update mark to current position"},{"key":"d","desc":"Delete mark"}]' && eww open submap-hints --screen "$(hyprctl monitors -j | jq '.[] | select(.focused==true) | .id')"
+      bind = ALT, s, exec, eww update submap_name='Sioyek' submap_keys='[{"key":"b","desc":"Open bookmark"},{"key":"B","desc":"Open bookmark (new window)"},{"key":"u","desc":"Update bookmark position"},{"key":"d","desc":"Delete bookmark"}]' && eww open submap-hints --screen "$(hyprctl monitors -j | jq '.[] | select(.focused==true) | .id')"
       bind = ALT, s, submap, sioyek
 
       submap = sioyek
-      bind = , b, exec, $close_hints; ~/.config/sioyek/open-mark.sh
+      bind = , b, exec, $close_hints; ~/.config/sioyek/open-bookmark.nu
       bind = , b, submap, reset
-      bind = SHIFT, b, exec, $close_hints; ~/.config/sioyek/open-mark.sh --new-window
+      bind = SHIFT, b, exec, $close_hints; ~/.config/sioyek/open-bookmark.nu --new-window
       bind = SHIFT, b, submap, reset
-      bind = , u, exec, $close_hints; ~/.config/sioyek/update-mark.sh
+      bind = , u, exec, $close_hints; ~/.config/sioyek/update-bookmark.nu
       bind = , u, submap, reset
-      bind = , d, exec, $close_hints; ~/.config/sioyek/delete-mark.sh
+      bind = , d, exec, $close_hints; ~/.config/sioyek/delete-bookmark.nu
       bind = , d, submap, reset
       bind = , Escape, exec, $close_hints
       bind = , Escape, submap, reset
