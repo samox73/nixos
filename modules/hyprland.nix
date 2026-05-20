@@ -2,6 +2,7 @@
   wayland.windowManager.hyprland = {
     enable = true;
     package = pkgs-unstable.hyprland;
+    systemd.enable = false;
     settings = {
       # Monitor configuration
       monitor = if hostname == "nexus" then [
@@ -54,6 +55,8 @@
 
         tablet = {
           output = "desc:Lenovo Group Limited P40w-20 V90F4187";
+          active_area_size = "224 94.5";
+          active_area_position = "0 26.75";
         };
       };
 
@@ -106,12 +109,6 @@
         orientation = "center";
         mfact = 0.5;
       };
-
-      # Window rules
-      windowrulev2 = [
-        "bordercolor rgb(dce6cc),focus:1"
-        "bordercolor rgb(556a35),focus:0"
-      ];
 
       # Keybindings - using ALT (Mod1) to match your Sway config
       "$mod" = "ALT";
