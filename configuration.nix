@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, ... }:
+{ config, pkgs, pkgs-unstable, lib, ... }:
 
 {
   imports = [
@@ -16,7 +16,6 @@
   # Use latest kernel.
   boot.kernelPackages = pkgs.linuxPackages_latest;
   boot.kernelModules = [ "usb-storage" ];
-
 
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
@@ -89,6 +88,9 @@
     };
     hyprland = {
       enable = true;
+      withUWSM = true;
+      package = pkgs-unstable.hyprland;
+      portalPackage = pkgs-unstable.xdg-desktop-portal-hyprland;
     };
     git = {
       enable = true;
@@ -99,6 +101,16 @@
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true;
   services.blueman.enable = true;
+
+  # Tablet / Wacom config
+  hardware.opentabletdriver.enable = true;
+  services.xserver.wacom.enable = true;
+
+  # Allow non-bonded BT HID devices (needed for Wacom Intuos Pro)
+  environment.etc."bluetooth/input.conf".text = lib.mkForce ''
+    [General]
+    ClassicBondedOnly=false
+  '';
 
   # List services that you want to enable:
 
@@ -123,13 +135,15 @@
     enable = true;
     settings = {
       default_session = {
-        command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd Hyprland";
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd 'uwsm start -F -D Hyprland -- start-hyprland'";
 	user = "greeter";
       };
     };
   };
 
   fonts.fontDir.enable = true;
+
+  services.udev.packages = [ pkgs.libwacom ];
 
   # Enable the OpenSSH daemon.
   # services.openssh.enable = true;
