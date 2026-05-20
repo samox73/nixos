@@ -103,8 +103,7 @@
   services.blueman.enable = true;
 
   # Tablet / Wacom config
-  hardware.opentabletdriver.enable = true;
-  services.xserver.wacom.enable = true;
+  hardware.opentabletdriver.enable = true; # use Artist Mode output (not Absolute) for Wayland apps to receive proper motion events
 
   # Allow non-bonded BT HID devices (needed for Wacom Intuos Pro)
   environment.etc."bluetooth/input.conf".text = lib.mkForce ''

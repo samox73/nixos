@@ -1,4 +1,4 @@
-{ pkgs, ags, astal, pkgs-unstable, hostname, ... }: {
+{ pkgs, ags, astal, pkgs-unstable, pkgs-rnote, hostname, ... }: {
   imports = [
     ags.homeManagerModules.default
     ./modules/alacritty.nix
@@ -45,7 +45,8 @@
       '';
     }))
     xournalpp
-    rnote
+    krita
+    pkgs-rnote.rnote
     libwacom
     libinput
     whatsapp-electron
