@@ -45,6 +45,9 @@
       '';
     }))
     xournalpp
+    rnote
+    libwacom
+    libinput
     whatsapp-electron
     grim
     gh
@@ -72,7 +75,7 @@
     hyprpicker
     obs-studio
     slack
-    everforest-gtk-theme
+    pkgs-unstable.everforest-gtk-theme
     everforest-cursors
     eww                  # widget system for submap hints
     jq                   # JSON processing
@@ -391,8 +394,8 @@
     };
 
     theme = {
-      name = "Everforest-Dark-Medium";
-      package = pkgs.everforest-gtk-theme;
+      name = "Everforest-Dark";
+      package = pkgs-unstable.everforest-gtk-theme;
     };
 
     cursorTheme = {
@@ -411,7 +414,8 @@
         gtk-application-prefer-dark-theme=1
       '';
     };
+    # gtk4.extraCss = builtins.readFile "${pkgs-unstable.everforest-gtk-theme}/share/themes/Everforest-Dark/gtk-4.0/gtk.css";
   };
 
-  home.sessionVariables.GTK_THEME = "Everforest-Dark-Medium";
+  home.sessionVariables.GTK_THEME = "Everforest-Dark";
 }
