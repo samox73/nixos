@@ -1,11 +1,11 @@
-{ hostname, pkgs-unstable, ... }: {
+{ hostname, pkgs-unstable, lib, ... }: {
   wayland.windowManager.hyprland = {
     enable = true;
     package = pkgs-unstable.hyprland;
     systemd.enable = false;
     settings = {
       # Monitor configuration
-      monitor = if hostname == "nexus" then [
+      monitor = if hostname == "alakazam" then [
         "HDMI-A-1,1920x1080@75,0x180,1"          # Acer on the left
         "DP-1,2560x1440@240,1920x0,1"            # Samsung on the right
       ] else [
@@ -67,7 +67,7 @@
         border_size = 1;
         "col.active_border" = "rgb(dce6cc)";
         "col.inactive_border" = "rgb(556a35)";
-        layout = "master";
+        layout = if hostname == "umbreon" then "master" else "dwindle";
       };
 
       # Decoration
@@ -103,17 +103,29 @@
         ];
       };
 
-      # Master layout
+      # Master layout (umbreon)
       master = {
         new_status = "slave";
         orientation = "center";
         mfact = 0.5;
       };
 
+      # Dwindle layout (alakazam)
+      dwindle = {
+        preserve_split = true;
+      };
+
       # Keybindings - using ALT (Mod1) to match your Sway config
       "$mod" = "ALT";
 
-      bind = [
+      bind = let
+        layoutBinds = if hostname == "umbreon" then [
+          "$mod, m, layoutmsg, swapwithmaster"
+          "$mod, n, exec, hyprctl --batch 'dispatch layoutmsg swapwithmaster child ; dispatch layoutmsg cyclenext'"
+        ] else [
+          "$mod, m, layoutmsg, togglesplit"
+        ];
+      in [
         # Terminal
         "$mod, Return, exec, alacritty"
 
@@ -147,8 +159,6 @@
         # Launchers
         "$mod, space, exec, rofi -modi combi -show combi -combi-modi drun,run -no-levenshtein-sort"
         # Layout
-        "$mod, m, layoutmsg, swapwithmaster"
-        "$mod, n, exec, hyprctl --batch 'dispatch layoutmsg swapwithmaster child ; dispatch layoutmsg cyclenext'"
         "$mod SHIFT, f, fullscreen, 0"
         "$mod SHIFT, space, togglefloating,"
 
@@ -206,7 +216,7 @@
 
         # Move all windows from current workspace to another
         "$mod SHIFT, w, exec, ~/.config/hypr/move-windows.nu"
-      ];
+      ] ++ layoutBinds;
 
       # Volume control (bindl for locked screen support)
       bindl = [

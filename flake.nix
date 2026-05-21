@@ -25,13 +25,13 @@
         config.allowUnfree = true;
       };
     in {
-    nixosConfigurations.nexus = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.alakazam = nixpkgs.lib.nixosSystem {
       inherit system;
       specialArgs = { inherit pkgs-unstable; };
       modules = [
-        ./hardware-configuration-nexus.nix
+        ./hardware-configuration-alakazam.nix
         ./configuration.nix
-        { networking.hostName = "nexus";
+        { networking.hostName = "alakazam";
           boot.resumeDevice = "/dev/disk/by-uuid/e19d076a-d3e1-4031-8ad3-cb81085e4499";
         }
 	home-manager.nixosModules.home-manager
@@ -39,7 +39,7 @@
 	  home-manager.useGlobalPkgs = true;
 	  home-manager.useUserPackages = true;
 	  home-manager.users.samox = import ./home.nix;
-	  home-manager.extraSpecialArgs = { inherit ags astal pkgs-unstable pkgs-rnote; hostname = "nexus"; };
+	  home-manager.extraSpecialArgs = { inherit ags astal pkgs-unstable pkgs-rnote; hostname = "alakazam"; };
 	}
       ];
     };
