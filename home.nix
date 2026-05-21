@@ -62,6 +62,7 @@
     wl-clipboard
     clipman
     dunst
+    libnotify
     kanshi
     pamixer
     playerctl

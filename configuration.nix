@@ -54,10 +54,12 @@
   users.users.samox = {
     isNormalUser = true;
     description = "Samuel Recker";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "networkmanager" "wheel" "input" ];
     packages = with pkgs; [];
     shell = pkgs.nushell;
   };
+
+  environment.shells = [ pkgs.nushell ];
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -102,9 +104,6 @@
   hardware.bluetooth.powerOnBoot = true;
   services.blueman.enable = true;
 
-  # Tablet / Wacom config
-  hardware.opentabletdriver.enable = true; # use Artist Mode output (not Absolute) for Wayland apps to receive proper motion events
-
   # Allow non-bonded BT HID devices (needed for Wacom Intuos Pro)
   environment.etc."bluetooth/input.conf".text = lib.mkForce ''
     [General]
@@ -143,6 +142,23 @@
   fonts.fontDir.enable = true;
 
   services.udev.packages = [ pkgs.libwacom ];
+  services.udev.extraRules = ''
+    KERNEL=="uinput", GROUP="input", MODE="0660"
+  '';
+
+  services.input-remapper.enable = true;
+
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id === "org.freedesktop.policykit.exec") {
+        var program = action.lookup("program");
+        if (program && program.indexOf("input-remapper-control") !== -1 &&
+            subject.isInGroup("input")) {
+          return polkit.Result.YES;
+        }
+      }
+    });
+  '';
 
   # Enable the OpenSSH daemon.
   # services.openssh.enable = true;

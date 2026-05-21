@@ -52,6 +52,12 @@
           natural_scroll = true;
           scroll_factor = 1.0;
         };
+
+        tablet = {
+          output = "desc:Lenovo Group Limited P40w-20 V90F4187";
+          active_area_size = "224 94.5";
+          active_area_position = "0 26.75";
+        };
       };
 
       # General settings
