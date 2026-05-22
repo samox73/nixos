@@ -36,6 +36,7 @@
 
   home.packages = with pkgs; [
     pkgs-unstable.claude-code
+    translate-shell
     firefox
     thunderbird
     (spotify.overrideAttrs (old: {

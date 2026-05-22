@@ -52,15 +52,61 @@ export def show [
     }
 }
 
+def types [] {
+  [
+    normal
+    fire
+    water
+    electric
+    grass
+    ice
+    fighting
+    poison
+    ground
+    flying
+    psychic
+    bug
+    rock
+    ghost
+    dragon
+    dark
+    steel
+    fairy
+  ]
+}
+
+export def effectiveness [attacker: string, ...defender: string] {
+    let yaml_path = ($DATA_DIR | path join type-effectiveness.yaml)
+    $defender | each {|d| (open $yaml_path | get $attacker | get $d)} | math product
+}
+
+def colorize-effectiveness [val: float] {
+    match $val {
+        0.25 => $"(ansi black)(ansi bg_red)1/4(ansi reset)",
+        0.5  => $"(ansi black)(ansi bg_yellow)1/2(ansi reset)",
+        2.0  => $"(ansi black)(ansi bg_green) 2 (ansi reset)",
+        4.0  => $"(ansi black)(ansi bg_cyan) 4 (ansi reset)",
+        _    => $" ($val | into string) "
+    }
+}
+
 # Base stats for a pokemon
 export def stats [
     query: string # Pokemon name or id
 ] {
     let pokemon = (find-pokemon $query)
+    let effectiveness = types
+        | each {|t| {$t: (effectiveness $t ...$pokemon.types)}}
+        | reduce {|it, acc| $acc | merge $it}
+        | transpose key val
+        | each {|r| {$r.key: (colorize-effectiveness ($r.val | into float))}}
+        | reduce {|it, acc| $acc | merge $it}
     let total = ($pokemon.stats | values | math sum)
     { name: $pokemon.name, id: $pokemon.id }
     | merge $pokemon.stats
     | insert total $total
+    | reject id
+    | insert effectiveness $effectiveness
 }
 
 # Moves grouped by learn method
