@@ -77,7 +77,8 @@ def types [] {
 
 export def effectiveness [attacker: string, ...defender: string] {
     let yaml_path = ($DATA_DIR | path join type-effectiveness.yaml)
-    $defender | each {|d| (open $yaml_path | get $attacker | get $d)} | math product
+    let v = $defender | each {|d| (open $yaml_path | get $attacker | get $d)} | math product | into float
+    colorize-effectiveness $v
 }
 
 def colorize-effectiveness [val: float] {
@@ -97,9 +98,6 @@ export def stats [
     let pokemon = (find-pokemon $query)
     let effectiveness = types
         | each {|t| {$t: (effectiveness $t ...$pokemon.types)}}
-        | reduce {|it, acc| $acc | merge $it}
-        | transpose key val
-        | each {|r| {$r.key: (colorize-effectiveness ($r.val | into float))}}
         | reduce {|it, acc| $acc | merge $it}
     let total = ($pokemon.stats | values | math sum)
     { name: $pokemon.name, id: $pokemon.id }
