@@ -77,6 +77,7 @@
     wl-color-picker
     hyprpicker
     obs-studio
+    audacity             # audio recording from mic and system audio
     slack
     pkgs-unstable.everforest-gtk-theme
     everforest-cursors

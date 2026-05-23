@@ -110,6 +110,15 @@
     ClassicBondedOnly=false
   '';
 
+  # Audio via PipeWire
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;  # exposes PulseAudio socket so Audacity sees "PulseAudio" host
+    jack.enable = true;
+  };
+
   # List services that you want to enable:
 
   services.tlp = {

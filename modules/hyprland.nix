@@ -24,6 +24,7 @@
         "waybar"
         "swaybg -i /home/samox/wallpapers/nature/mist_forest_2.png -m fill"
         "mkdir -p /home/samox/gdrive && rclone mount gdrive: /home/samox/gdrive --vfs-cache-mode full"
+        "wl-paste --type text --watch clipman store"
       ];
 
       # Workspace to monitor bindings
@@ -54,7 +55,8 @@
         };
 
         tablet = {
-          output = "desc:Lenovo Group Limited P40w-20 V90F4187";
+          output = if hostname == "alakazam" then "desc:Samsung Electric Company LC27G7xT H4ZR701769" else "desc:Lenovo Group Limited P40w-20 V90F4187";
+        } // lib.optionalAttrs (hostname != "alakazam") {
           active_area_size = "224 94.5";
           active_area_position = "0 26.75";
         };
@@ -201,6 +203,9 @@
         "$mod, e, exec, GTK_THEME=Adwaita-dark evolution"
         "$mod, f, exec, hyprpicker -a"
         "$mod, c, exec, hyprshot -m region --clipboard-only"
+
+        # Clipboard manager
+        "CTRL SHIFT ALT, c, exec, clipman pick -t rofi --tool-args='-i'"
 
         # Lock screen
         "CTRL SHIFT, F8, exec, swaylock -f && systemctl suspend"
