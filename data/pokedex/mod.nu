@@ -1,5 +1,7 @@
 # Pokedex — query pokemon data from the shell
 
+use completion.nu *
+
 const DATA_DIR = path self .
 
 def load [] {
@@ -39,9 +41,16 @@ export def main [] {
     load | select id name types
 }
 
+# Open a pokemon's pokemondb page in Firefox
+export def dex [
+    query: string@"nu-complete pokemon" # Pokemon name
+] {
+    let _ = firefox $"https://pokemondb.net/pokedex/($query)" | complete
+}
+
 # Full entry for a pokemon by name or id
 export def show [
-    query: string # Pokemon name or id
+    query: string@"nu-complete pokemon" # Pokemon name or id
     --moves (-m) # show moves as well
 ] {
     let res = find-pokemon $query
@@ -93,7 +102,7 @@ def colorize-effectiveness [val: float] {
 
 # Base stats for a pokemon
 export def stats [
-    query: string # Pokemon name or id
+    query: string@"nu-complete pokemon" # Pokemon name or id
 ] {
     let pokemon = (find-pokemon $query)
     let effectiveness = types
@@ -109,7 +118,7 @@ export def stats [
 
 # Moves grouped by learn method
 export def moves [
-    query: string # Pokemon name or id
+    query: string@"nu-complete pokemon" # Pokemon name or id
 ] {
     let pokemon = (find-pokemon $query)
     $pokemon.moves | transpose method moves
@@ -141,7 +150,7 @@ export def search [
 
 # Side-by-side stat comparison
 export def compare [
-    ...names: string # Two or more pokemon names or ids
+    ...names: string@"nu-complete pokemon" # Two or more pokemon names or ids
 ] {
     if ($names | length) < 2 {
         error make { msg: "Provide at least 2 pokemon to compare" }
