@@ -10,7 +10,7 @@
         "DP-1,2560x1440@240,1920x0,1"            # Samsung on the right
       ] else [
         "eDP-1,1920x1200@60,0x0,1"                                  # Laptop screen on the left
-        "desc:Lenovo Group Limited P40w-20,5120x2160@60,1920x0,1.25"  # Lenovo P40w-20 ultrawide on the right
+        "desc:Lenovo Group Limited P40w-20,5120x2160@60,1920x0,1.33"  # Lenovo P40w-20 ultrawide on the right
       ];
 
       # Environment variables
