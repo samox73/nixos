@@ -24,7 +24,7 @@
         "waybar"
         "swaybg -i /home/samox/wallpapers/nature/mist_forest_2.png -m fill"
         "mkdir -p /home/samox/gdrive && rclone mount gdrive: /home/samox/gdrive --vfs-cache-mode full"
-        "wl-paste --type text --watch clipman store"
+        "wl-paste --type text/plain --watch clipman store"
       ];
 
       # Workspace to monitor bindings
@@ -193,6 +193,9 @@
         "$mod SHIFT, 8, movetoworkspace, 8"
         "$mod SHIFT, 9, movetoworkspace, 9"
         "$mod SHIFT, 0, movetoworkspace, 10"
+
+        # Clipboard history
+        "$mod CTRL SHIFT, c, exec, clipman pick -t rofi"
 
         # Config reload
         "$mod SHIFT CTRL, r, exec, hyprctl reload"

@@ -58,6 +58,9 @@
     swayidle
     swaylock
     sioyek
+    zotero
+    kdePackages.okular
+    logseq
     slurp
     hyprshot
     wl-clipboard
@@ -90,8 +93,10 @@
     gphoto2              # transfer photos from Nikon camera via USB
     nautilus              # GTK file manager
     rclone                # mount Google Drive as local directory
+    vscode               # code editor
     obsidian             # markdown editor
     pandoc               # conversion between document formats
+    poppler-utils        # PDF command-line tools (pdftotext, pdfinfo, pdftoppm)
 
     # Screensharing dependencies
     pipewire

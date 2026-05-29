@@ -42,7 +42,7 @@ export def main [] {
 }
 
 # Open a pokemon's pokemondb page in Firefox
-export def dex [
+export def wiki [
     query: string@"nu-complete pokemon" # Pokemon name
 ] {
     let _ = firefox $"https://pokemondb.net/pokedex/($query)" | complete
@@ -54,10 +54,22 @@ export def show [
     --moves (-m) # show moves as well
 ] {
     let res = find-pokemon $query
+    let res = $res
+        | insert effectiveness (defense-chart $res.types)
+        | update evolution (chain-paths $res.evolution)
     if $moves {
         $res
     } else {
         $res | reject moves
+    }
+}
+
+def chain-paths [node, prefix: string = ""] {
+    let label = if $prefix == "" { $node.name } else { $"($prefix) → ($node.name)" }
+    if ($node.evolves_to | is-empty) {
+        [$label]
+    } else {
+        $node.evolves_to | each {|c| chain-paths $c $label} | flatten
     }
 }
 
@@ -115,20 +127,23 @@ def colorize-effectiveness [val: float] {
     }
 }
 
+def defense-chart [pokemon_types: list<string>] {
+    types
+        | each {|t| {$t: (effectiveness $t ...$pokemon_types)}}
+        | reduce {|it, acc| $acc | merge $it}
+}
+
 # Base stats for a pokemon
 export def stats [
     query: string@"nu-complete pokemon" # Pokemon name or id
 ] {
     let pokemon = (find-pokemon $query)
-    let effectiveness = types
-        | each {|t| {$t: (effectiveness $t ...$pokemon.types)}}
-        | reduce {|it, acc| $acc | merge $it}
     let total = ($pokemon.stats | values | math sum)
     { name: $pokemon.name, id: $pokemon.id }
     | merge $pokemon.stats
     | insert total $total
     | reject id
-    | insert effectiveness $effectiveness
+    | insert effectiveness (defense-chart $pokemon.types)
 }
 
 # Moves grouped by learn method
@@ -188,4 +203,31 @@ export def compare [
 # Random pokemon entry
 export def random [] {
     load | shuffle | first
+}
+
+def colorize-matrix [val: float] {
+    match $val {
+        0.0  => $"(ansi white)(ansi bg_dark_gray)   (ansi reset)",
+        0.25 => $"(ansi black)(ansi bg_red)   (ansi reset)",
+        0.5  => $"(ansi black)(ansi bg_red)   (ansi reset)",
+        2.0  => $"(ansi black)(ansi bg_green)   (ansi reset)",
+        4.0  => $"(ansi black)(ansi bg_green)   (ansi reset)",
+        _    => "   "
+    }
+}
+
+# Type effectiveness matrix (attack rows × defense columns)
+export def matrix [] {
+    let yaml_path = ($DATA_DIR | path join type-effectiveness.yaml)
+    let data = (open $yaml_path)
+    let type_list = (types)
+
+    $type_list | each {|attacker|
+        let cells = $type_list | reduce -f {} {|defender, acc|
+            let v = ($data | get $attacker | get $defender | into float)
+            let key = ($defender | str substring 0..<3 | str upcase)
+            $acc | insert $key (colorize-matrix $v)
+        }
+        {"ATK\\DEF": ($attacker | str upcase)} | merge $cells
+    }
 }
