@@ -105,6 +105,7 @@
     nodejs       # for some LSP servers
     curl         # for mason package downloads
     wget         # for mason package downloads
+    zip          # for mason package extraction
     unzip        # for mason package extraction
     gzip         # for mason package extraction
     texpresso    # live rendering latex

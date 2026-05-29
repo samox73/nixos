@@ -85,9 +85,24 @@ def types [] {
 }
 
 export def effectiveness [attacker: string, ...defender: string] {
+    if ($defender | length) == 0 {
+        effectiveness-pokemon $attacker
+    } else {
+        effectiveness-types $attacker ...$defender
+    }
+}
+
+def effectiveness-types [attacker: string, ...defender: string] {
     let yaml_path = ($DATA_DIR | path join type-effectiveness.yaml)
     let v = $defender | each {|d| (open $yaml_path | get $attacker | get $d)} | math product | into float
     colorize-effectiveness $v
+}
+
+def effectiveness-pokemon [pkmn: string] {
+    let pokemon = (find-pokemon $pkmn)
+    types
+        | each {|t| {$t: (effectiveness $t ...$pokemon.types)}}
+        | reduce {|it, acc| $acc | merge $it}
 }
 
 def colorize-effectiveness [val: float] {
