@@ -53,11 +53,59 @@ impl IslandResource {
     }
 }
 
+#[derive(Clone, Copy, Default, serde::Serialize, serde::Deserialize)]
+pub struct ProductionSettings {
+    #[serde(default)]
+    pub premium_holz: bool,
+    #[serde(default)]
+    pub premium_wein: bool,
+    #[serde(default)]
+    pub premium_marmor: bool,
+    #[serde(default)]
+    pub premium_kristall: bool,
+    #[serde(default)]
+    pub premium_schwefel: bool,
+    #[serde(default)]
+    pub temp_holz: f64,
+    #[serde(default)]
+    pub temp_wein: f64,
+    #[serde(default)]
+    pub temp_marmor: f64,
+    #[serde(default)]
+    pub temp_kristall: f64,
+    #[serde(default)]
+    pub temp_schwefel: f64,
+}
+
+impl ProductionSettings {
+    pub fn premium_for(&self, resource: IslandResource) -> bool {
+        match resource {
+            IslandResource::Wein => self.premium_wein,
+            IslandResource::Marmor => self.premium_marmor,
+            IslandResource::Kristall => self.premium_kristall,
+            IslandResource::Schwefel => self.premium_schwefel,
+        }
+    }
+
+    pub fn temp_for(&self, resource: IslandResource) -> f64 {
+        match resource {
+            IslandResource::Wein => self.temp_wein,
+            IslandResource::Marmor => self.temp_marmor,
+            IslandResource::Kristall => self.temp_kristall,
+            IslandResource::Schwefel => self.temp_schwefel,
+        }
+    }
+}
+
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct Island {
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub resource: IslandResource,
+    #[serde(default)]
     pub sagewerk: u32,
+    #[serde(default)]
     pub resource_level: u32,
 }
 
@@ -74,35 +122,63 @@ impl Default for Island {
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct Town {
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub island_id: Option<usize>,
+    #[serde(default)]
     pub stadthaltersitz: u32,
+    #[serde(default)]
+    pub palast_level: u32,
+    #[serde(default)]
     pub warehouse_level: u32,
-    // Workers assigned to each resource
+    #[serde(default)]
     pub holz_workers: u32,
+    #[serde(default)]
     pub secondary_workers: u32,
-    // Production buildings (+2% output per level)
+    #[serde(default)]
     pub forsthaus: u32,
+    #[serde(default)]
     pub winzerei: u32,
+    #[serde(default)]
     pub steinmetz: u32,
+    #[serde(default)]
     pub glasblaeserei: u32,
+    #[serde(default)]
     pub alchemistenturm: u32,
-    // Consumption buildings (reduce resource usage)
+    #[serde(default)]
     pub zimmerei: u32,
+    #[serde(default)]
     pub kelterei: u32,
+    #[serde(default)]
     pub architekturburo: u32,
+    #[serde(default)]
     pub optiker: u32,
+    #[serde(default)]
     pub feuerwerksplatz: u32,
+    #[serde(default)]
+    pub holz_stock: u64,
+    #[serde(default)]
+    pub secondary_stock: u64,
 }
 
 impl Town {
-    pub fn holz_production(&self) -> f64 {
-        self.holz_workers as f64 * (1.0 + 0.02 * self.forsthaus as f64)
+    fn production_multiplier(&self, building_level: u32, theater: bool, premium: bool, temp_bonus: f64) -> f64 {
+        let premium_bonus = if premium { 0.20 } else { 0.0 };
+        let theater_bonus = if theater { 0.20 } else { 0.0 };
+        let building_bonus = building_level as f64 * 0.02;
+        1.0 + premium_bonus + theater_bonus + temp_bonus + building_bonus
     }
 
-    pub fn secondary_production(&self, resource: IslandResource) -> f64 {
-        self.secondary_workers as f64
-            * (1.0 + 0.02 * self.secondary_building_level(resource) as f64)
+    pub fn holz_production(&self, settings: &ProductionSettings, theater: bool) -> f64 {
+        let mult = self.production_multiplier(self.forsthaus, theater, settings.premium_holz, settings.temp_holz);
+        self.holz_workers as f64 * mult
+    }
+
+    pub fn secondary_production(&self, resource: IslandResource, settings: &ProductionSettings, theater: bool) -> f64 {
+        let level = self.secondary_building_level(resource);
+        let mult = self.production_multiplier(level, theater, settings.premium_for(resource), settings.temp_for(resource));
+        self.secondary_workers as f64 * mult
     }
 
     pub fn secondary_building_level(&self, resource: IslandResource) -> u32 {
@@ -122,7 +198,6 @@ impl Town {
             IslandResource::Schwefel => &mut self.alchemistenturm,
         }
     }
-
 }
 
 impl Default for Town {
@@ -131,6 +206,7 @@ impl Default for Town {
             name: "Neue Stadt".to_string(),
             island_id: None,
             stadthaltersitz: 1,
+            palast_level: 0,
             warehouse_level: 5,
             holz_workers: 0,
             secondary_workers: 0,
@@ -144,15 +220,28 @@ impl Default for Town {
             architekturburo: 0,
             optiker: 0,
             feuerwerksplatz: 0,
+            holz_stock: 0,
+            secondary_stock: 0,
         }
     }
 }
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct Account {
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub towns: Vec<Town>,
+    #[serde(default)]
     pub islands: Vec<Island>,
+    #[serde(default)]
+    pub settings: ProductionSettings,
+    #[serde(default)]
+    pub theater_holz_town: Option<usize>,
+    #[serde(default)]
+    pub theater_secondary_town: Option<usize>,
+    #[serde(default)]
+    pub capital_town: Option<usize>,
 }
 
 impl Default for Account {
@@ -161,6 +250,10 @@ impl Default for Account {
             name: "Neuer Account".to_string(),
             towns: vec![],
             islands: vec![],
+            settings: ProductionSettings::default(),
+            theater_holz_town: None,
+            theater_secondary_town: None,
+            capital_town: None,
         }
     }
 }
@@ -168,6 +261,10 @@ impl Default for Account {
 pub fn demo_account() -> Account {
     Account {
         name: "Spieler1".to_string(),
+        settings: ProductionSettings::default(),
+        theater_holz_town: None,
+        theater_secondary_town: None,
+        capital_town: Some(0),
         islands: vec![
             Island {
                 name: "Aegäis".to_string(),
@@ -193,6 +290,7 @@ pub fn demo_account() -> Account {
                 name: "Athen".to_string(),
                 island_id: Some(0),
                 stadthaltersitz: 3,
+                palast_level: 0,
                 warehouse_level: 12,
                 holz_workers: 220,
                 secondary_workers: 80,
@@ -206,11 +304,14 @@ pub fn demo_account() -> Account {
                 architekturburo: 0,
                 optiker: 0,
                 feuerwerksplatz: 0,
+                holz_stock: 5000,
+                secondary_stock: 2000,
             },
             Town {
                 name: "Peloponnes".to_string(),
                 island_id: Some(1),
                 stadthaltersitz: 3,
+                palast_level: 0,
                 warehouse_level: 10,
                 holz_workers: 170,
                 secondary_workers: 98,
@@ -224,11 +325,14 @@ pub fn demo_account() -> Account {
                 architekturburo: 4,
                 optiker: 0,
                 feuerwerksplatz: 0,
+                holz_stock: 5000,
+                secondary_stock: 2000,
             },
             Town {
                 name: "Sparta".to_string(),
                 island_id: Some(2),
                 stadthaltersitz: 3,
+                palast_level: 0,
                 warehouse_level: 8,
                 holz_workers: 115,
                 secondary_workers: 42,
@@ -242,6 +346,8 @@ pub fn demo_account() -> Account {
                 architekturburo: 0,
                 optiker: 3,
                 feuerwerksplatz: 0,
+                holz_stock: 5000,
+                secondary_stock: 2000,
             },
         ],
     }

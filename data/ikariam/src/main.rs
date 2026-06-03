@@ -2,6 +2,7 @@ mod app;
 mod islands_view;
 mod model;
 mod optimize_view;
+mod tables;
 mod towns_view;
 
 fn main() -> eframe::Result<()> {
