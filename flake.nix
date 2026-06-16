@@ -11,9 +11,10 @@
     };
     ags.url = "github:aylur/ags";
     astal.url = "github:aylur/astal";
+    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { nixpkgs, nixpkgs-unstable, nixpkgs-rnote, home-manager, ags, astal, ... }:
+  outputs = { nixpkgs, nixpkgs-unstable, nixpkgs-rnote, home-manager, ags, astal, rust-overlay, ... }:
     let
       system = "x86_64-linux";
       pkgs-unstable = import nixpkgs-unstable {
@@ -29,6 +30,7 @@
       inherit system;
       specialArgs = { inherit pkgs-unstable; };
       modules = [
+        ({ ... }: { nixpkgs.overlays = [ rust-overlay.overlays.default ]; })
         ./hardware-configuration-alakazam.nix
         ./configuration.nix
         { networking.hostName = "alakazam";
@@ -48,6 +50,7 @@
       inherit system;
       specialArgs = { inherit pkgs-unstable; };
       modules = [
+        ({ ... }: { nixpkgs.overlays = [ rust-overlay.overlays.default ]; })
         ./hardware-configuration-umbreon.nix
         ./configuration.nix
         { networking.hostName = "umbreon"; }

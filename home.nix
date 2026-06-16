@@ -1,4 +1,21 @@
-{ pkgs, ags, astal, pkgs-unstable, pkgs-rnote, hostname, ... }: {
+{ pkgs, ags, astal, pkgs-unstable, pkgs-rnote, hostname, ... }:
+let
+  androidBuildToolsVersion = "34.0.0";
+  androidPlatformVersion = "34";
+  androidNdkVersion = "26.1.10909125";
+  androidComposition = pkgs.androidenv.composeAndroidPackages {
+    platformVersions = [ androidPlatformVersion ];
+    buildToolsVersions = [ androidBuildToolsVersion ];
+    includeNDK = true;
+    ndkVersions = [ androidNdkVersion ];
+    includeEmulator = false;
+    includeSystemImages = false;
+  };
+  rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+    extensions = [ "rust-src" "rustfmt" "clippy" ];
+    targets = [ "aarch64-linux-android" "x86_64-linux-android" ];
+  };
+in {
   imports = [
     ags.homeManagerModules.default
     ./modules/alacritty.nix
@@ -36,8 +53,10 @@
 
   home.packages = with pkgs; [
     pkgs-unstable.claude-code
+    pkgs-unstable.codex
     translate-shell
     firefox
+    chromium
     thunderbird
     (spotify.overrideAttrs (old: {
       postInstall = (old.postInstall or "") + ''
@@ -60,7 +79,6 @@
     sioyek
     zotero
     kdePackages.okular
-    logseq
     slurp
     hyprshot
     wl-clipboard
@@ -86,7 +104,7 @@
     everforest-cursors
     eww                  # widget system for submap hints
     jq                   # JSON processing
-    sqlite               # for sioyek bookmark lookup script
+    litecli
     bat                  # syntax-highlighted cat
     fzf                  # fuzzy finder
     darktable            # RAW photo editor with Nikon NEF support
@@ -97,6 +115,13 @@
     obsidian             # markdown editor
     pandoc               # conversion between document formats
     poppler-utils        # PDF command-line tools (pdftotext, pdfinfo, pdftoppm)
+    ntfsprogs            # mkfs.ntfs and other NTFS tools
+
+    # Android development
+    androidComposition.androidsdk  # sdkmanager, adb, platform-tools, cmdline-tools
+    gradle
+    cargo-ndk
+    jdk17                          # Android Gradle Plugin 8.x requires JDK 17
 
     # Screensharing dependencies
     pipewire
@@ -128,11 +153,8 @@
     pyright      # Python LSP server
 
     # Rust development
-    rustc
-    cargo
+    rustToolchain
     rust-analyzer  # Rust LSP server
-    rustfmt        # Rust formatter
-    clippy         # Rust linter
 
     # C++ development tools
     cmake        # build system
@@ -150,6 +172,25 @@
     xorg.libX11  # X11 library
     xorg.libXi   # X11 input extension
     xorg.libXmu  # X11 miscellaneous utilities
+    wayland
+    libxkbcommon
+    xorg.libXcursor
+    xorg.libXrandr
+
+    # Vulkan development
+    vulkan-tools             # vulkaninfo, vkcube
+    vulkan-validation-layers # validation layers for debugging
+    vulkan-loader            # Vulkan ICD loader
+    vulkan-headers           # Vulkan headers for compilation
+    #glslang                  # glslangValidator: GLSL/HLSL → SPIR-V
+    shaderc                  # glslc: GLSL/HLSL → SPIR-V
+    #spirv-tools              # SPIR-V assembler, disassembler, validator
+    renderdoc                # GPU frame debugger
+
+    #protobuf
+    grpc-tools
+
+    kotlin
 
     font-awesome  # for waybar icons
     nerd-fonts.commit-mono
@@ -427,5 +468,13 @@
     # gtk4.extraCss = builtins.readFile "${pkgs-unstable.everforest-gtk-theme}/share/themes/Everforest-Dark/gtk-4.0/gtk.css";
   };
 
-  home.sessionVariables.GTK_THEME = "Everforest-Dark";
+  home.sessionVariables = {
+    GTK_THEME = "Everforest-Dark";
+    ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
+    ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
+    ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk/${androidNdkVersion}";
+    ANDROID_NDK_HOME = "${androidComposition.androidsdk}/libexec/android-sdk/ndk/${androidNdkVersion}";
+    JAVA_HOME = "${pkgs.jdk17}/lib/openjdk";
+    GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidComposition.androidsdk}/libexec/android-sdk/build-tools/${androidBuildToolsVersion}/aapt2";
+  };
 }

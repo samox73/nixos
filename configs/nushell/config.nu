@@ -7,4 +7,3 @@ alias l = ls
 def nf [] { let file = (fzf --preview 'bat --color=always --style=numbers {}' | str trim); if $file != "" { nvim $file } }
 
 use /home/samox/.config/nixos/data/pokedex
-use /home/samox/.config/nixos/data/ikariam

@@ -63,6 +63,11 @@
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.android_sdk.accept_license = true;
+  # TODO: check if obsidian/slack/whatsapp-electron has moved to a newer electron and this can be removed
+  nixpkgs.config.permittedInsecurePackages = [
+    "electron-39.8.10"
+  ];
 
   nix.settings.experimental-features = [
     "nix-command"
@@ -82,6 +87,23 @@
   #   enable = true;
   #   enableSSHSupport = true;
   # };
+
+  hardware.graphics.enable = true;
+
+  programs.nix-ld = {
+    enable = true;
+    libraries = with pkgs; [
+      libGL
+      wayland
+      libxkbcommon
+      xorg.libX11
+      xorg.libXcursor
+      xorg.libXi
+      xorg.libXrandr
+      vulkan-loader
+      vulkan-validation-layers
+    ];
+  };
 
   programs = {
     sway = {
