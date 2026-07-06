@@ -1,4 +1,4 @@
-{ pkgs, ags, astal, pkgs-unstable, pkgs-rnote, hostname, ... }:
+{ config, pkgs, ags, astal, pkgs-unstable, pkgs-rnote, hostname, ... }:
 let
   androidBuildToolsVersion = "34.0.0";
   androidPlatformVersion = "34";
@@ -8,13 +8,68 @@ let
     buildToolsVersions = [ androidBuildToolsVersion ];
     includeNDK = true;
     ndkVersions = [ androidNdkVersion ];
-    includeEmulator = false;
-    includeSystemImages = false;
+    includeEmulator = true;
+    includeSystemImages = true;
+    systemImageTypes = [ "google_apis" ];
+    abiVersions = [ "x86_64" ];
   };
   rustToolchain = pkgs.rust-bin.stable.latest.default.override {
     extensions = [ "rust-src" "rustfmt" "clippy" ];
     targets = [ "aarch64-linux-android" "x86_64-linux-android" ];
   };
+  # `phy`: a physics scratchpad — euporie-console (a rich terminal Jupyter REPL)
+  # preloaded with numpy/scipy/matplotlib + physical constants. Runs in the
+  # current terminal; matplotlib plots render inline (crisply in a graphics-
+  # capable terminal like kitty). Self-contained: own python, kernel, kernelspec.
+  phyPython = pkgs.python3.withPackages (ps: with ps; [
+    # euporie patched for Jupyter-style cell editing in the console:
+    #   - Shift+Enter runs the current input (upstream hardcodes s-enter to
+    #     insert a newline, shadowing any key-binding config).
+    #   - Enter always inserts a newline; it no longer auto-runs once the input
+    #     is a complete statement (the two `accept` paths in on_enter).
+    # Running is therefore Shift+Enter (or Ctrl+Enter / Ctrl+E). With kitty's
+    # keyboard protocol (which euporie enables) kitty sends a distinct sequence
+    # for Shift+Enter automatically — no kitty `map` needed. ~18s one-time build.
+    (euporie.overrideAttrs (old: {
+      postPatch = (old.postPatch or "") + ''
+        substituteInPlace euporie/console/tabs/console.py \
+          --replace-fail \
+            'event.current_buffer.newline(copy_margin=not in_paste_mode())' \
+            'self.run(event.current_buffer)' \
+          --replace-fail \
+            'accept = buffer.text[-2:] == "\n\n"' \
+            'accept = False' \
+          --replace-fail \
+            'accept = buffer.validate(set_cursor=False)' \
+            'accept = False'
+      '';
+    }))
+    ipykernel     # the python kernel euporie drives
+    numpy
+    scipy
+    (matplotlib.override { enableTk = true; })  # inline by default; `%matplotlib tk` = popup fallback
+  ]);
+  # A dedicated kernelspec whose kernel preloads phy_startup.py at boot. euporie
+  # can't print at kernel start, so the constants table is exposed as `consts`.
+  phyKernel = pkgs.writeTextDir "share/jupyter/kernels/phy/kernel.json" (builtins.toJSON {
+    argv = [
+      "${phyPython}/bin/python" "-m" "ipykernel_launcher" "-f" "{connection_file}"
+      "--IPKernelApp.exec_files=[\"${./configs/python/phy_startup.py}\"]"
+    ];
+    display_name = "phy";
+    language = "python";
+  });
+  phy = pkgs.writeShellScriptBin "phy" ''
+    export JUPYTER_PATH="${phyKernel}/share/jupyter''${JUPYTER_PATH:+:$JUPYTER_PATH}"
+    exec ${phyPython}/bin/euporie-console --kernel-name phy \
+      --color-scheme custom \
+      --custom-background-color "#2d353b" \
+      --custom-foreground-color "#d3c6aa" \
+      --accent-color "#a7c080" \
+      --syntax-theme zenburn \
+      --custom-styles '{"cell input prompt":"fg:#7fbbb3 bold","cell output prompt":"fg:#e69875 bold"}' \
+      "$@"
+  '';
 in {
   imports = [
     ags.homeManagerModules.default
@@ -23,6 +78,7 @@ in {
     ./modules/neovim.nix
     ./modules/yazi.nix
     ./modules/nushell.nix
+    ./modules/kitty.nix
     ./modules/hyprland.nix
     ./modules/rofi.nix
     ./modules/sway.nix
@@ -52,6 +108,7 @@ in {
   };
 
   home.packages = with pkgs; [
+    phy          # euporie physics scratchpad in kitty (np/scipy/plt + constants)
     pkgs-unstable.claude-code
     pkgs-unstable.codex
     translate-shell
@@ -92,6 +149,7 @@ in {
     imagemagick
     mcp-nixos
     texliveFull
+    networkmanagerapplet  # nm-connection-editor GUI for WPA-Enterprise (eduroam)
     pavucontrol           # for waybar pulseaudio right-click
     ueberzugpp            # for image previews in yazi file browser
     sway-contrib.grimshot # for easier screenshots in wayland
@@ -114,6 +172,9 @@ in {
     vscode               # code editor
     obsidian             # markdown editor
     pandoc               # conversion between document formats
+    doxygen              # source code documentation generator
+    openmpi              # MPI implementation for parallel computing
+    openmpi.dev          # MPI headers, mpicc, and pkg-config files for building
     poppler-utils        # PDF command-line tools (pdftotext, pdfinfo, pdftoppm)
     ntfsprogs            # mkfs.ntfs and other NTFS tools
 
@@ -198,6 +259,17 @@ in {
     nerd-fonts.jetbrains-mono
   ];
 
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "text/html" = "firefox.desktop";
+      "x-scheme-handler/http" = "firefox.desktop";
+      "x-scheme-handler/https" = "firefox.desktop";
+      "x-scheme-handler/about" = "firefox.desktop";
+      "x-scheme-handler/unknown" = "firefox.desktop";
+    };
+  };
+
   xdg.configFile."hypr/move-windows.nu" = {
     executable = true;
     text = ''
@@ -216,6 +288,33 @@ in {
       }
     '';
   };
+
+  xdg.configFile."hypr/rules.conf".text = ''
+    windowrule {
+      name = android-emulator-class
+      match:class = .*[Ee]mulator.*
+
+      float = true
+      allows_input = true
+    }
+
+    windowrule {
+      name = android-emulator-title
+      match:title = .*[Ee]mulator.*
+
+      float = true
+      allows_input = true
+    }
+
+    # Float matplotlib (phy) plot windows from `%matplotlib tk`.
+    # The Tk backend sets WM_CLASS to "matplotlib".
+    windowrule {
+      name = matplotlib-float
+      match:class = [Mm]atplotlib
+
+      float = true
+    }
+  '';
 
   xdg.configFile."eww/eww.yuck".text = ''
     (defvar submap_name "")
@@ -474,6 +573,10 @@ in {
     ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
     ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk/${androidNdkVersion}";
     ANDROID_NDK_HOME = "${androidComposition.androidsdk}/libexec/android-sdk/ndk/${androidNdkVersion}";
+    # avdmanager writes AVDs under $XDG_CONFIG_HOME/.android while the emulator
+    # only searches $HOME/.android by default. Pin both to one explicit path.
+    # Absolute (not $HOME) so it's also valid as a literal in nushell's load-env.
+    ANDROID_AVD_HOME = "${config.home.homeDirectory}/.android/avd";
     JAVA_HOME = "${pkgs.jdk17}/lib/openjdk";
     GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidComposition.androidsdk}/libexec/android-sdk/build-tools/${androidBuildToolsVersion}/aapt2";
   };

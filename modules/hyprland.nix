@@ -1,4 +1,4 @@
-{ hostname, pkgs-unstable, lib, ... }: {
+{ hostname, pkgs-unstable, lib, config, ... }: {
   wayland.windowManager.hyprland = {
     enable = true;
     package = pkgs-unstable.hyprland;
@@ -16,6 +16,8 @@
       # Environment variables
       env = [
         "ELECTRON_OZONE_PLATFORM_HINT,auto"
+        # Allow XWayland apps (e.g. Android emulator) to receive keyboard input
+        "XMODIFIERS,"
       ];
 
       # Startup applications
@@ -71,6 +73,13 @@
         "col.inactive_border" = "rgb(556a35)";
         layout = if hostname == "umbreon" then "master" else "dwindle";
       };
+
+      # Stop Hyprland from upscaling XWayland apps (e.g. Android emulator);
+      # they manage their own DPI.
+      xwayland = {
+        force_zero_scaling = true;
+      };
+
 
       # Decoration
       decoration = {
@@ -237,9 +246,12 @@
         "$mod, mouse:272, movewindow"
         "$mod, mouse:273, resizewindow"
       ];
+
     };
 
     extraConfig = ''
+      source = ${config.home.homeDirectory}/.config/hypr/rules.conf
+
       $close_hints = eww close submap-hints
 
       bind = ALT, s, exec, eww update submap_name='Sioyek' submap_keys='[{"key":"b","desc":"Open bookmark"},{"key":"B","desc":"Open bookmark (new window)"},{"key":"u","desc":"Update bookmark position"},{"key":"d","desc":"Delete bookmark"}]' && eww open submap-hints --screen "$(hyprctl monitors -j | jq '.[] | select(.focused==true) | .id')"

@@ -54,7 +54,7 @@
   users.users.samox = {
     isNormalUser = true;
     description = "Samuel Recker";
-    extraGroups = [ "networkmanager" "wheel" "input" ];
+    extraGroups = [ "networkmanager" "wheel" "input" "kvm" ];
     packages = with pkgs; [];
     shell = pkgs.nushell;
   };
@@ -78,6 +78,7 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     mcp-nixos
+    cmake
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -164,7 +165,7 @@
     enable = true;
     settings = {
       default_session = {
-        command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd 'uwsm start -F -D Hyprland -- start-hyprland'";
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd 'uwsm start -F -e -D Hyprland -- start-hyprland'";
 	user = "greeter";
       };
     };
