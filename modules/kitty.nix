@@ -9,6 +9,8 @@
     };
     settings = {
       window_padding_width = 10;
+      confirm_os_window_close = 0;
+      scrollback_lines = 20000;
 
       # Everforest Dark
       background = "#2d353b";

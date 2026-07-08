@@ -123,10 +123,12 @@ in {
     }))
     xournalpp
     krita
+    gimp
     pkgs-rnote.rnote
     libwacom
     libinput
     whatsapp-electron
+    signal-desktop
     grim
     gh
     rofi
@@ -177,6 +179,10 @@ in {
     openmpi.dev          # MPI headers, mpicc, and pkg-config files for building
     poppler-utils        # PDF command-line tools (pdftotext, pdfinfo, pdftoppm)
     ntfsprogs            # mkfs.ntfs and other NTFS tools
+    gitui
+    lazygit
+    delta
+    git-extras
 
     # Android development
     androidComposition.androidsdk  # sdkmanager, adb, platform-tools, cmdline-tools
@@ -257,6 +263,15 @@ in {
     nerd-fonts.commit-mono
     nerd-fonts.symbols-only
     nerd-fonts.jetbrains-mono
+
+    # vhs (terminal-recorder) dependencies
+    ffmpeg
+    ttyd
+
+    # obs keypress display
+    showmethekey
+
+    quantum-espresso
   ];
 
   xdg.mimeApps = {

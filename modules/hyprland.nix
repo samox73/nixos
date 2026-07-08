@@ -80,7 +80,6 @@
         force_zero_scaling = true;
       };
 
-
       # Decoration
       decoration = {
         rounding = 0;
@@ -138,7 +137,7 @@
         ];
       in [
         # Terminal
-        "$mod, Return, exec, alacritty"
+        "$mod, Return, exec, kitty"
 
         # Window management
         "$mod, Q, killactive,"
