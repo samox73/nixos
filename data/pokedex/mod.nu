@@ -207,17 +207,17 @@ export def random [] {
 
 def colorize-matrix [val: float] {
     match $val {
-        0.0  => $"(ansi white)(ansi bg_dark_gray)   (ansi reset)",
-        0.25 => $"(ansi black)(ansi bg_red)   (ansi reset)",
-        0.5  => $"(ansi black)(ansi bg_red)   (ansi reset)",
-        2.0  => $"(ansi black)(ansi bg_green)   (ansi reset)",
-        4.0  => $"(ansi black)(ansi bg_green)   (ansi reset)",
-        _    => "   "
+        0.0  => $"(ansi white)(ansi bg_dark_gray) 0 (ansi reset)",
+        0.25 => $"(ansi black)(ansi bg_red)1/4(ansi reset)",
+        0.5  => $"(ansi black)(ansi bg_red)1/2(ansi reset)",
+        2.0  => $"(ansi black)(ansi bg_green) 2 (ansi reset)",
+        4.0  => $"(ansi black)(ansi bg_green) 4 (ansi reset)",
+        _    => " 1 "
     }
 }
 
 # Type effectiveness matrix (attack rows × defense columns)
-export def matrix [] {
+export def matrix [--numerical] {
     let yaml_path = ($DATA_DIR | path join type-effectiveness.yaml)
     let data = (open $yaml_path)
     let type_list = (types)
@@ -226,7 +226,8 @@ export def matrix [] {
         let cells = $type_list | reduce -f {} {|defender, acc|
             let v = ($data | get $attacker | get $defender | into float)
             let key = ($defender | str substring 0..<3 | str upcase)
-            $acc | insert $key (colorize-matrix $v)
+            let val = if $numerical { $v } else { colorize-matrix $v }
+            $acc | insert $key $val
         }
         {"ATK\\DEF": ($attacker | str upcase)} | merge $cells
     }
