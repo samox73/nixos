@@ -55,7 +55,7 @@ export def show [
 ] {
     let res = find-pokemon $query
     let res = $res
-        | insert effectiveness (defense-chart $res.types)
+        | insert effectiveness (defense-effectiveness-chart ...$res.types)
         | update evolution (chain-paths $res.evolution)
     if $moves {
         $res
@@ -127,7 +127,7 @@ def colorize-effectiveness [val: float] {
     }
 }
 
-def defense-chart [pokemon_types: list<string>] {
+export def defense-effectiveness-chart [...pokemon_types: string] {
     types
         | each {|t| {$t: (effectiveness $t ...$pokemon_types)}}
         | reduce {|it, acc| $acc | merge $it}
@@ -143,7 +143,7 @@ export def stats [
     | merge $pokemon.stats
     | insert total $total
     | reject id
-    | insert effectiveness (defense-chart $pokemon.types)
+    | insert effectiveness (defense-effectiveness-chart ...$pokemon.types)
 }
 
 # Moves grouped by learn method
@@ -216,8 +216,8 @@ def colorize-matrix [val: float] {
     }
 }
 
-# Type effectiveness matrix (attack rows × defense columns)
-export def matrix [--numerical] {
+# Type effectiveness chart (attack rows × defense columns)
+export def effectiveness-chart [--numerical] {
     let yaml_path = ($DATA_DIR | path join type-effectiveness.yaml)
     let data = (open $yaml_path)
     let type_list = (types)
