@@ -28,7 +28,7 @@ def find-pokemon [query: string] {
     let matches = if $id != null {
         $data | where id == $id
     } else {
-        $data | where name == ($query | str downcase)
+        $data | where name == ($query | str downcase | str trim | str replace -a " " "-")
     }
     if ($matches | is-empty) {
         error make { msg: $"Pokemon '($query)' not found" }
@@ -55,7 +55,7 @@ export def show [
 ] {
     let res = find-pokemon $query
     let res = $res
-        | insert effectiveness (defense-effectiveness-chart ...$res.types)
+        | insert effectiveness (effectiveness-types ...$res.types)
         | update evolution (chain-paths $res.evolution)
     if $moves {
         $res
@@ -96,25 +96,35 @@ def types [] {
   ]
 }
 
-export def effectiveness [attacker: string, ...defender: string] {
-    if ($defender | length) == 0 {
-        effectiveness-pokemon $attacker
+def is-type [value: string] {
+    ($value | str downcase) in (types)
+}
+
+export def effectiveness [query: string, ...rest: string] {
+    let args = ([$query] | append $rest | each {|a| $a | str downcase})
+    if ($args | all {|a| is-type $a}) {
+        if ($args | length) > 2 {
+            error make { msg: "Provide one pokemon or one/two types" }
+        }
+        effectiveness-types ...$args
+    } else if ($rest | is-empty) {
+        effectiveness-pokemon $query
     } else {
-        effectiveness-types $attacker ...$defender
+        error make { msg: "Provide one pokemon or one/two types" }
     }
 }
 
-def effectiveness-types [attacker: string, ...defender: string] {
+def effectiveness-multiplier [attacker: string, ...defender: string] {
     let yaml_path = ($DATA_DIR | path join type-effectiveness.yaml)
+    let attacker = ($attacker | str downcase)
+    let defender = ($defender | each {|d| $d | str downcase})
     let v = $defender | each {|d| (open $yaml_path | get $attacker | get $d)} | math product | into float
     colorize-effectiveness $v
 }
 
 def effectiveness-pokemon [pkmn: string] {
     let pokemon = (find-pokemon $pkmn)
-    types
-        | each {|t| {$t: (effectiveness $t ...$pokemon.types)}}
-        | reduce {|it, acc| $acc | merge $it}
+    effectiveness-types ...$pokemon.types
 }
 
 def colorize-effectiveness [val: float] {
@@ -127,9 +137,18 @@ def colorize-effectiveness [val: float] {
     }
 }
 
-export def defense-effectiveness-chart [...pokemon_types: string] {
+export def effectiveness-types [...pokemon_types: string] {
+    let pokemon_types = ($pokemon_types | each {|t| $t | str downcase})
+    if ($pokemon_types | length) > 2 {
+        error make { msg: "Provide one or two types" }
+    }
+    for t in $pokemon_types {
+        if not (is-type $t) {
+            error make { msg: $"Unknown type '($t)'" }
+        }
+    }
     types
-        | each {|t| {$t: (effectiveness $t ...$pokemon_types)}}
+        | each {|t| {$t: (effectiveness-multiplier $t ...$pokemon_types)}}
         | reduce {|it, acc| $acc | merge $it}
 }
 
@@ -143,7 +162,7 @@ export def stats [
     | merge $pokemon.stats
     | insert total $total
     | reject id
-    | insert effectiveness (defense-effectiveness-chart ...$pokemon.types)
+    | insert effectiveness (effectiveness-types ...$pokemon.types)
 }
 
 # Moves grouped by learn method
