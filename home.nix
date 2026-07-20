@@ -17,33 +17,16 @@ let
     extensions = [ "rust-src" "rustfmt" "clippy" ];
     targets = [ "aarch64-linux-android" "x86_64-linux-android" ];
   };
-  # `phy`: a physics scratchpad — euporie-console (a rich terminal Jupyter REPL)
-  # preloaded with numpy/scipy/matplotlib + physical constants. Runs in the
-  # current terminal; matplotlib plots render inline (crisply in a graphics-
-  # capable terminal like kitty). Self-contained: own python, kernel, kernelspec.
+  # `phy`: a physics scratchpad — euporie-notebook (a rich terminal Jupyter
+  # notebook editor) preloaded with numpy/scipy/matplotlib + physical
+  # constants. Real notebook semantics (independent cells, Shift+Enter runs
+  # and advances natively — unlike euporie-console, which shares one input
+  # history across cells, so up-arrow in a fresh cell recalls the previous
+  # one). Opens a throwaway .ipynb path that's never written unless you
+  # explicitly save, so it stays a no-clutter scratchpad. Self-contained: own
+  # python, kernel, kernelspec.
   phyPython = pkgs.python3.withPackages (ps: with ps; [
-    # euporie patched for Jupyter-style cell editing in the console:
-    #   - Shift+Enter runs the current input (upstream hardcodes s-enter to
-    #     insert a newline, shadowing any key-binding config).
-    #   - Enter always inserts a newline; it no longer auto-runs once the input
-    #     is a complete statement (the two `accept` paths in on_enter).
-    # Running is therefore Shift+Enter (or Ctrl+Enter / Ctrl+E). With kitty's
-    # keyboard protocol (which euporie enables) kitty sends a distinct sequence
-    # for Shift+Enter automatically — no kitty `map` needed. ~18s one-time build.
-    (euporie.overrideAttrs (old: {
-      postPatch = (old.postPatch or "") + ''
-        substituteInPlace euporie/console/tabs/console.py \
-          --replace-fail \
-            'event.current_buffer.newline(copy_margin=not in_paste_mode())' \
-            'self.run(event.current_buffer)' \
-          --replace-fail \
-            'accept = buffer.text[-2:] == "\n\n"' \
-            'accept = False' \
-          --replace-fail \
-            'accept = buffer.validate(set_cursor=False)' \
-            'accept = False'
-      '';
-    }))
+    euporie
     ipykernel     # the python kernel euporie drives
     numpy
     scipy
@@ -61,14 +44,15 @@ let
   });
   phy = pkgs.writeShellScriptBin "phy" ''
     export JUPYTER_PATH="${phyKernel}/share/jupyter''${JUPYTER_PATH:+:$JUPYTER_PATH}"
-    exec ${phyPython}/bin/euporie-console --kernel-name phy \
+    exec ${phyPython}/bin/euporie-notebook --kernel-name phy \
+      --edit-mode vi \
       --color-scheme custom \
       --custom-background-color "#2d353b" \
       --custom-foreground-color "#d3c6aa" \
       --accent-color "#a7c080" \
       --syntax-theme zenburn \
       --custom-styles '{"cell input prompt":"fg:#7fbbb3 bold","cell output prompt":"fg:#e69875 bold"}' \
-      "$@"
+      "$(mktemp -u --suffix=.ipynb)" "$@"
   '';
 in {
   imports = [
@@ -81,6 +65,7 @@ in {
     ./modules/kitty.nix
     ./modules/hyprland.nix
     ./modules/rofi.nix
+    ./modules/mako.nix
     ./modules/sway.nix
     ./modules/waybar.nix
   ];
@@ -108,7 +93,7 @@ in {
   };
 
   home.packages = with pkgs; [
-    phy          # euporie physics scratchpad in kitty (np/scipy/plt + constants)
+    phy          # euporie-notebook physics scratchpad in kitty (np/scipy/plt + constants)
     pkgs-unstable.claude-code
     pkgs-unstable.codex
     translate-shell
@@ -142,7 +127,7 @@ in {
     hyprshot
     wl-clipboard
     clipman
-    dunst
+    mako   # notification daemon; dunst 1.13 didn't repaint its Wayland surface while Hyprland was idle
     libnotify
     kanshi
     pamixer
@@ -183,6 +168,7 @@ in {
     lazygit
     delta
     git-extras
+    dyff
 
     # Android development
     androidComposition.androidsdk  # sdkmanager, adb, platform-tools, cmdline-tools

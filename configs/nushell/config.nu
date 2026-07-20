@@ -60,3 +60,16 @@ module fix {
 use fix
 
 export def cdr --env [] { cd (git rev-parse --show-toplevel) }
+
+# Fire a desktop notification after `delay`, Go-style: 30s, 4m10s, 1h5m3s.
+# ponytail: nohup+disown detaches it so it survives closing this terminal
+export def timers [message: string, delay: string] {
+    let m = ($delay | parse -r '^(?:(?<h>\d+)h)?(?:(?<m>\d+)m)?(?:(?<s>\d+)s)?$')
+    if (($delay | str trim | is-empty) or ($m | is-empty)) {
+        error make {msg: $"invalid duration '($delay)' — use e.g. 30s, 4m10s, 1h5m3s"}
+    }
+    let r = ($m | first)
+    let n = {|s| if ($s | is-empty) { 0 } else { $s | into int } }
+    let secs = (do $n $r.h) * 3600 + (do $n $r.m) * 60 + (do $n $r.s)
+    ^bash -c $"nohup sh -c 'sleep ($secs); notify-send \"($message)\"' >/dev/null 2>&1 & disown"
+}

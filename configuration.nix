@@ -107,6 +107,9 @@
   };
 
   programs = {
+    steam = {
+      enable = true;
+    };
     sway = {
       enable = true;
       wrapperFeatures.gtk = true;

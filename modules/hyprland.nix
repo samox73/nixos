@@ -24,6 +24,7 @@
       exec-once = [
         "eww daemon"
         "waybar"
+        "mako"
         "swaybg -i /home/samox/wallpapers/nature/mist_forest_2.png -m fill"
         "mkdir -p /home/samox/gdrive && rclone mount gdrive: /home/samox/gdrive --vfs-cache-mode full"
         "wl-paste --type text/plain --watch clipman store"
