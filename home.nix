@@ -1,4 +1,4 @@
-{ config, pkgs, ags, astal, pkgs-unstable, pkgs-rnote, hostname, ... }:
+{ config, pkgs, pkgs-unstable, pkgs-rnote, hostname, ... }:
 let
   androidBuildToolsVersion = "34.0.0";
   androidPlatformVersion = "34";
@@ -56,7 +56,6 @@ let
   '';
 in {
   imports = [
-    ags.homeManagerModules.default
     ./modules/alacritty.nix
     ./modules/git.nix
     ./modules/neovim.nix
@@ -67,7 +66,6 @@ in {
     ./modules/rofi.nix
     ./modules/mako.nix
     ./modules/sway.nix
-    ./modules/waybar.nix
   ];
 
   home.stateVersion = "25.11";
@@ -79,21 +77,8 @@ in {
     gtk.enable = true;
   };
 
-  programs = {
-    ags = {
-      enable = true;
-      configDir = null;  # already exists at ~/.config/ags
-      extraPackages = with astal.packages.${pkgs.system}; [
-        hyprland
-        battery
-        wireplumber
-        network
-      ];
-    };
-  };
-
   home.packages = with pkgs; [
-    phy          # euporie-notebook physics scratchpad in kitty (np/scipy/plt + constants)
+    pkgs-unstable.quickshell
     pkgs-unstable.claude-code
     pkgs-unstable.codex
     translate-shell
@@ -112,8 +97,10 @@ in {
     pkgs-rnote.rnote
     libwacom
     libinput
+    glib
     whatsapp-electron
     signal-desktop
+    discord
     grim
     gh
     rofi
@@ -134,10 +121,11 @@ in {
     playerctl
     brightnessctl
     imagemagick
+    loupe
     mcp-nixos
     texliveFull
     networkmanagerapplet  # nm-connection-editor GUI for WPA-Enterprise (eduroam)
-    pavucontrol           # for waybar pulseaudio right-click
+    pavucontrol
     ueberzugpp            # for image previews in yazi file browser
     sway-contrib.grimshot # for easier screenshots in wayland
     wl-color-picker
@@ -200,10 +188,11 @@ in {
     gotools      # goimports, etc.
 
     # Python development
-    python3
+    (python3.withPackages (ps: with ps; [ jupyterlab numpy matplotlib scipy tensorly ]))
     python3Packages.pip
     python3Packages.virtualenv
     pyright      # Python LSP server
+    jetbrains.pycharm
 
     # Rust development
     rustToolchain
@@ -245,7 +234,7 @@ in {
 
     kotlin
 
-    font-awesome  # for waybar icons
+    font-awesome
     nerd-fonts.commit-mono
     nerd-fonts.symbols-only
     nerd-fonts.jetbrains-mono
@@ -257,8 +246,15 @@ in {
     # obs keypress display
     showmethekey
 
-    quantum-espresso
+    # physics stuff
+    quantum-espresso # alternative to VASP, ab-initio simulations
+    phy          # euporie-notebook physics scratchpad in kitty (np/scipy/plt + constants)
   ];
+
+  xdg.configFile."quickshell/samox" = {
+    source = ./configs/quickshell;
+    recursive = true;
+  };
 
   xdg.mimeApps = {
     enable = true;
@@ -268,7 +264,16 @@ in {
       "x-scheme-handler/https" = "firefox.desktop";
       "x-scheme-handler/about" = "firefox.desktop";
       "x-scheme-handler/unknown" = "firefox.desktop";
-    };
+    } // builtins.listToAttrs (map (name: {
+      inherit name;
+      value = "org.gnome.Loupe.desktop";
+    }) [
+      "image/jpeg" "image/png" "image/gif" "image/webp" "image/tiff" "image/x-tga"
+      "image/vnd-ms.dds" "image/x-dds" "image/bmp" "image/vnd.microsoft.icon"
+      "image/vnd.radiance" "image/x-exr" "image/x-portable-bitmap" "image/x-portable-graymap"
+      "image/x-portable-pixmap" "image/x-portable-anymap" "image/x-qoi" "image/qoi"
+      "image/svg+xml" "image/svg+xml-compressed" "image/avif" "image/heic" "image/jxl"
+    ]);
   };
 
   xdg.configFile."hypr/move-windows.nu" = {
@@ -570,6 +575,7 @@ in {
 
   home.sessionVariables = {
     GTK_THEME = "Everforest-Dark";
+    _ZO_FZF_OPTS = "--exact --no-sort --bind=ctrl-z:ignore,btab:up,tab:down --cycle --keep-right --border=sharp --height=20% --info=inline --layout=reverse --tabstop=1 --exit-0 --color=fg:#d3c6aa,bg:#2d353b,hl:#dbbc7f,fg+:#d3c6aa,bg+:#475258,hl+:#dbbc7f,info:#859289,prompt:#a7c080,pointer:#a7c080,marker:#d699b6,spinner:#83c092,header:#7fbbb3,border:#475258";
     ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
     ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
     ANDROID_NDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk/ndk/${androidNdkVersion}";

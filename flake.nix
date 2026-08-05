@@ -2,19 +2,17 @@
   description = "NixOS config of Samuel Recker";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-rnote.url = "github:NixOS/nixpkgs/9da7f1cf7f8a6e2a7cb3001b048546c92a8258b4";
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    ags.url = "github:aylur/ags";
-    astal.url = "github:aylur/astal";
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { nixpkgs, nixpkgs-unstable, nixpkgs-rnote, home-manager, ags, astal, rust-overlay, ... }:
+  outputs = { nixpkgs, nixpkgs-unstable, nixpkgs-rnote, home-manager, rust-overlay, ... }:
     let
       system = "x86_64-linux";
       pkgs-unstable = import nixpkgs-unstable {
@@ -41,7 +39,7 @@
 	  home-manager.useGlobalPkgs = true;
 	  home-manager.useUserPackages = true;
 	  home-manager.users.samox = import ./home.nix;
-	  home-manager.extraSpecialArgs = { inherit ags astal pkgs-unstable pkgs-rnote; hostname = "alakazam"; };
+	  home-manager.extraSpecialArgs = { inherit pkgs-unstable pkgs-rnote; hostname = "alakazam"; };
 	}
       ];
     };
@@ -59,7 +57,7 @@
 	  home-manager.useGlobalPkgs = true;
 	  home-manager.useUserPackages = true;
 	  home-manager.users.samox = import ./home.nix;
-	  home-manager.extraSpecialArgs = { inherit ags astal pkgs-unstable pkgs-rnote; hostname = "umbreon"; };
+	  home-manager.extraSpecialArgs = { inherit pkgs-unstable pkgs-rnote; hostname = "umbreon"; };
 	}
       ];
     };

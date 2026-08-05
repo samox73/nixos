@@ -106,6 +106,11 @@
     ];
   };
 
+  virtualisation.podman = {
+    enable = true;
+    dockerCompat = true;
+  };
+
   programs = {
     steam = {
       enable = true;
@@ -117,8 +122,12 @@
     hyprland = {
       enable = true;
       withUWSM = true;
-      package = pkgs-unstable.hyprland;
-      portalPackage = pkgs-unstable.xdg-desktop-portal-hyprland;
+      package = pkgs.hyprland;
+      portalPackage = pkgs.xdg-desktop-portal-hyprland;
+    };
+    hyprlock = {
+      enable = true;
+      package = pkgs-unstable.hyprlock;
     };
     git = {
       enable = true;
@@ -161,6 +170,9 @@
     };
   };
 
+  services.hypridle.package = pkgs-unstable.hypridle;
+
+  services.upower.enable = true;
   services.udisks2.enable = true;
   services.gvfs.enable = true;
 

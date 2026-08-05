@@ -11,7 +11,7 @@
     in {
       modifier = mod;
       terminal = "alacritty";
-      bars = []; # we exec waybar manually
+      bars = [];
       floating.modifier = mod;
       defaultWorkspace = "workspace 1";
 
@@ -61,7 +61,7 @@
       };
 
       startup = [
-        { command = "waybar"; }
+        { command = "qs -c samox"; }
         { command = "swayidle"; }
       ];
 

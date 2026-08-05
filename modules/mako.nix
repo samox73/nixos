@@ -1,5 +1,5 @@
 { ... }: {
-  # Everforest-themed notification popups; colors mirror kitty/waybar/rofi.
+  # Everforest-themed notification popups; colors mirror kitty/bar/rofi.
   xdg.configFile."mako/config".text = ''
     sort=-time
     layer=overlay
