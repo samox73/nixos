@@ -381,7 +381,7 @@ ShellRoot {
                     leftIsland.x + leftContent.x + networkButton.x + networkButton.width / 2 - width / 2))
                 anchor.rect.y: bar.height + 8
                 implicitWidth: 340
-                implicitHeight: 210
+                implicitHeight: networkPopupLayout.implicitHeight + 34
                 color: "transparent"
                 grabFocus: true
 
@@ -391,6 +391,7 @@ ShellRoot {
                     Keys.onEscapePressed: networkPopup.visible = false
 
                     Column {
+                        id: networkPopupLayout
                         anchors.fill: parent
                         anchors.margins: 16
                         spacing: 10
@@ -708,7 +709,7 @@ ShellRoot {
                     rightIsland.x + rightContent.x + spotifyButton.x + spotifyButton.width / 2 - width / 2))
                 anchor.rect.y: bar.height + 8
                 implicitWidth: 440
-                implicitHeight: 390
+                implicitHeight: spotifyPopupLayout.implicitHeight + 34
                 color: "transparent"
                 grabFocus: true
 
@@ -726,6 +727,7 @@ ShellRoot {
                     Keys.onEscapePressed: spotifyPopup.visible = false
 
                     Column {
+                        id: spotifyPopupLayout
                         anchors.fill: parent
                         anchors.margins: 16
                         spacing: 12
@@ -991,7 +993,7 @@ ShellRoot {
                     rightIsland.x + rightContent.x + weatherButton.x + weatherButton.width / 2 - width / 2))
                 anchor.rect.y: bar.height + 8
                 implicitWidth: 390
-                implicitHeight: 235
+                implicitHeight: weatherPopupLayout.implicitHeight + 34
                 color: "transparent"
                 grabFocus: true
 
@@ -1001,6 +1003,7 @@ ShellRoot {
                     Keys.onEscapePressed: weatherPopup.visible = false
 
                     Column {
+                        id: weatherPopupLayout
                         anchors.fill: parent
                         anchors.margins: 16
                         spacing: 9
