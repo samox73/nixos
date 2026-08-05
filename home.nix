@@ -1,4 +1,4 @@
-{ config, pkgs, pkgs-unstable, pkgs-rnote, hostname, ... }:
+{ config, pkgs, pkgs-unstable, pkgs-rnote, nvim-config, hostname, ... }:
 let
   androidBuildToolsVersion = "34.0.0";
   androidPlatformVersion = "34";
@@ -65,6 +65,7 @@ in {
     ./modules/hyprland.nix
     ./modules/rofi.nix
     ./modules/mako.nix
+    ./modules/ai.nix
   ];
 
   home.stateVersion = "25.11";
@@ -78,10 +79,7 @@ in {
 
   home.packages = with pkgs; [
     pkgs-unstable.quickshell
-    pkgs-unstable.claude-code
-    pkgs-unstable.codex
     translate-shell
-    firefox
     chromium
     thunderbird
     (spotify.overrideAttrs (old: {
@@ -152,6 +150,9 @@ in {
     delta
     git-extras
     dyff
+    glow
+    nix-search-cli
+    pkgs-unstable.rtk
 
     # Android development
     androidComposition.androidsdk  # sdkmanager, adb, platform-tools, cmdline-tools
@@ -188,6 +189,7 @@ in {
     python3Packages.virtualenv
     pyright      # Python LSP server
     jetbrains.pycharm
+    pkgs-unstable.uv
 
     # Rust development
     rustToolchain
@@ -235,6 +237,7 @@ in {
     nerd-fonts.jetbrains-mono
 
     # vhs (terminal-recorder) dependencies
+    vhs
     ffmpeg
     ttyd
 
@@ -245,6 +248,39 @@ in {
     quantum-espresso # alternative to VASP, ab-initio simulations
     phy          # euporie-notebook physics scratchpad in kitty (np/scipy/plt + constants)
   ];
+
+  programs.firefox = {
+    enable = true;
+    configPath = ".config/mozilla/firefox";
+    profiles = {
+      uni = {
+        id = 0;
+        path = "7irvrn36.uni";
+        isDefault = true;
+      };
+      private = {
+        id = 1;
+        settings."browser.privatebrowsing.autostart" = true;
+      };
+    };
+  };
+
+  home.file.".config/mozilla/firefox/profiles.ini".force = true;
+
+  xdg.configFile."nvim" = {
+    source = nvim-config;
+    force = true;
+  };
+
+  xdg.configFile."input-remapper-2/config.json" = {
+    source = ./configs/input-remapper/config.json;
+    force = true;
+  };
+
+  xdg.configFile."input-remapper-2/presets/Wacom Intuos Pro M Pad/custom.json" = {
+    source = ./configs/input-remapper/wacom-intuos-pro-m-pad.json;
+    force = true;
+  };
 
   xdg.configFile."quickshell/samox" = {
     source = ./configs/quickshell;
@@ -374,127 +410,6 @@ in {
       margin-top: 4px;
     }
   '';
-
-  xdg.configFile."sioyek/open-bookmark.nu" = {
-    executable = true;
-    text = ''
-      #!/usr/bin/env nu
-
-      def main [--new-window] {
-        let data_home = ($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")
-        let shared = $"($data_home)/sioyek/shared.db"
-        let local_db = $"($data_home)/sioyek/local.db"
-        if not ($shared | path exists) or not ($local_db | path exists) { return }
-
-        let sql = ("ATTACH '" + $local_db + "' AS local_db;
-          SELECT b.desc, b.document_path, b.offset_y, h.path,
-                 COALESCE(ob.zoom_level, 2.5) as zoom_level
-          FROM bookmarks b
-          JOIN local_db.document_hash h ON b.document_path = h.hash
-          LEFT JOIN opened_books ob ON ob.path = h.path
-          ORDER BY b.desc;")
-
-        let bookmarks = (sqlite3 -separator "\t" $shared $sql
-          | lines | where { $in != "" }
-          | split column "\t" desc doc_hash offset_y path zoom_level
-          | where {|b| $b.path | str trim | path exists })
-
-        if ($bookmarks | is-empty) { return }
-
-        let display = ($bookmarks
-          | each {|b| $"($b.desc)  →  ($b.path | path basename | str replace '.pdf' "")"}
-          | str join "\n")
-
-        let idx = (try { $display | rofi -dmenu -p "Bookmarks" -i -format i | str trim } catch { "" })
-        if $idx == "" or $idx == "-1" { return }
-
-        let selected = ($bookmarks | get ($idx | into int))
-        let doc_path = ($selected.path | str trim)
-        let doc_hash = ($selected.doc_hash | str trim)
-        let offset_y = ($selected.offset_y | str trim)
-        let zoom = ($selected.zoom_level | str trim)
-
-        # Write a temporary mark at the bookmark's position
-        let sql_mark = ("INSERT OR REPLACE INTO marks (document_path, symbol, offset_x, offset_y, zoom_level) VALUES ('" + $doc_hash + "', '~', 0, " + $offset_y + ", " + $zoom + ");")
-        sqlite3 $shared $sql_mark
-
-        if $new_window {
-          bash -c 'sioyek --new-window "$1" --execute-command goto_mark --execute-command-data "~" &' _ $doc_path
-        } else {
-          bash -c 'sioyek "$1" --execute-command goto_mark --execute-command-data "~" &' _ $doc_path
-        }
-      }
-    '';
-  };
-
-  xdg.configFile."sioyek/update-bookmark.nu" = {
-    executable = true;
-    text = ''
-      #!/usr/bin/env nu
-
-      def main [] {
-        let data_home = ($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")
-        let shared = $"($data_home)/sioyek/shared.db"
-        let local_db = $"($data_home)/sioyek/local.db"
-        if not ($shared | path exists) or not ($local_db | path exists) { return }
-
-        let bookmarks = (sqlite3 -separator "\t" $shared $"ATTACH '($local_db)' AS local_db;
-          SELECT b.desc, b.document_path, h.path FROM bookmarks b
-          JOIN local_db.document_hash h ON b.document_path = h.hash
-          ORDER BY b.desc;"
-          | lines | where { $in != "" } | split column "\t" desc doc_hash path)
-
-        if ($bookmarks | is-empty) { return }
-
-        let display = ($bookmarks
-          | each {|b| $"($b.desc)  →  ($b.path | path basename | str replace '.pdf' "")"}
-          | str join "\n")
-
-        let idx = (try { $display | rofi -dmenu -p "Update bookmark" -i -format i | str trim } catch { "" })
-        if $idx == "" or $idx == "-1" { return }
-
-        let selected = ($bookmarks | get ($idx | into int))
-        let desc_escaped = ($selected.desc | str replace -a "'" "''''")
-
-        sqlite3 $shared $"DELETE FROM bookmarks WHERE desc='($desc_escaped)' AND document_path='($selected.doc_hash)';"
-        sioyek --execute-command add_bookmark --execute-command-data $selected.desc
-      }
-    '';
-  };
-
-  xdg.configFile."sioyek/delete-bookmark.nu" = {
-    executable = true;
-    text = ''
-      #!/usr/bin/env nu
-
-      def main [] {
-        let data_home = ($env.XDG_DATA_HOME? | default $"($env.HOME)/.local/share")
-        let shared = $"($data_home)/sioyek/shared.db"
-        let local_db = $"($data_home)/sioyek/local.db"
-        if not ($shared | path exists) or not ($local_db | path exists) { return }
-
-        let bookmarks = (sqlite3 -separator "\t" $shared $"ATTACH '($local_db)' AS local_db;
-          SELECT b.desc, b.document_path, h.path FROM bookmarks b
-          JOIN local_db.document_hash h ON b.document_path = h.hash
-          ORDER BY b.desc;"
-          | lines | where { $in != "" } | split column "\t" desc doc_hash path)
-
-        if ($bookmarks | is-empty) { return }
-
-        let display = ($bookmarks
-          | each {|b| $"($b.desc)  →  ($b.path | path basename | str replace '.pdf' "")"}
-          | str join "\n")
-
-        let idx = (try { $display | rofi -dmenu -p "Delete bookmark" -i -format i | str trim } catch { "" })
-        if $idx == "" or $idx == "-1" { return }
-
-        let selected = ($bookmarks | get ($idx | into int))
-        let desc_escaped = ($selected.desc | str replace -a "'" "''''")
-
-        sqlite3 $shared $"DELETE FROM bookmarks WHERE desc='($desc_escaped)' AND document_path='($selected.doc_hash)';"
-      }
-    '';
-  };
 
   xdg.configFile."sioyek/prefs_user.config".text = ''
     # Everforest dark colors

@@ -81,6 +81,28 @@
     cmake
   ];
 
+  # Stable Codex defaults live at system scope so ~/.codex/config.toml remains
+  # writable for project trust, plugin hook approvals, and other local state.
+  environment.etc."codex/config.toml".source = (pkgs.formats.toml { }).generate "codex-config.toml" {
+    model = "gpt-5.6-sol";
+    model_reasoning_effort = "high";
+    personality = "pragmatic";
+    approval_policy = "never";
+    sandbox_mode = "danger-full-access";
+    approvals_reviewer = "user";
+
+    marketplaces.ponytail = {
+      source_type = "git";
+      source = "https://github.com/DietrichGebert/ponytail.git";
+    };
+    plugins."ponytail@ponytail".enabled = true;
+
+    mcp_servers.lsp = {
+      command = "npx";
+      args = [ "-y" "@theupsider/lsp-mcp@1.1.2" ];
+    };
+  };
+
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   # programs.mtr.enable = true;

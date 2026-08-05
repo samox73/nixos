@@ -85,12 +85,30 @@
         "type": "github"
       }
     },
+    "nvim-config": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785938031,
+        "narHash": "sha256-2qEqdqvE4gGrstRdyuWvjKT3trQVsDLhvcYkcjJGuRQ=",
+        "owner": "samox73",
+        "repo": "nvim",
+        "rev": "c72c4eb895ece56c0c7e188e23f7ca43c103fcba",
+        "type": "github"
+      },
+      "original": {
+        "owner": "samox73",
+        "ref": "main",
+        "repo": "nvim",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs",
         "nixpkgs-rnote": "nixpkgs-rnote",
         "nixpkgs-unstable": "nixpkgs-unstable",
+        "nvim-config": "nvim-config",
         "rust-overlay": "rust-overlay"
       }
     },

@@ -26,13 +26,42 @@ export def sync-phd [] {
   rclone sync ~/studies/phd gdrive:studies/phd --filter-from ~/studies/phd/.rcloneignore --progress --transfers 8 --checkers 16 --drive-chunk-size 64M
 }
 
+def activate-nvim [] {
+  ^nix flake update nvim-config --flake ~/.config/nixos
+  sudo nixos-rebuild switch --flake ~/.config/nixos
+}
+
 export module reload {
   export def nix [] {
     sudo nixos-rebuild switch --flake ~/.config/nixos
   }
 
+  export def nvim [] {
+    activate-nvim
+  }
+
   export def quickshell [] {
     pkill quickshell; qs --daemonize -c samox
+  }
+}
+
+export module update {
+  export def nvim [] {
+    let repo = ($env.HOME | path join repos nvim)
+    with-env { XDG_CONFIG_HOME: ($env.HOME | path join repos) } {
+      ^nvim --headless '+Lazy! update' +qa
+    }
+
+    ^git -C $repo add lazy-lock.json
+    let unchanged = ((^git -C $repo diff --cached --quiet -- lazy-lock.json | complete).exit_code == 0)
+    if not $unchanged {
+      ^git -C $repo commit -m 'Update plugins' -- lazy-lock.json
+    } else {
+      print 'Plugins already up to date'
+    }
+
+    ^git -C $repo push
+    activate-nvim
   }
 }
 

@@ -13,7 +13,7 @@ in {
     settings = {
       background = [{
         monitor = "";
-        path = "/home/samox/wallpapers/stary-night-galaxy-car-everforest-dark-medium-cropped.jpg";
+        path = "${../assets/wallpapers/stary-night-galaxy-car-everforest-dark-medium-cropped.jpg}";
         blur_passes = 0;
         contrast = 0.8916;
         brightness = 0.8916;
@@ -140,7 +140,7 @@ in {
       splash = false;
       wallpaper = [{
         monitor = "";
-        path = "/home/samox/wallpapers/stary-night-galaxy-car-everforest-dark-medium-cropped.jpg";
+        path = "${../assets/wallpapers/stary-night-galaxy-car-everforest-dark-medium-cropped.jpg}";
         fit_mode = "cover";
       }];
     };
@@ -188,9 +188,10 @@ in {
         "wl-paste --type text/plain --watch clipman store"
       ];
 
-      # Workspace to monitor bindings
-      # Odd workspaces on Samsung (DP-1), even on Acer (HDMI-A-1)
-      workspace = [
+      # Odd workspaces on the primary external display, even workspaces on the
+      # secondary/internal display. Disconnected workspaces fall back to the
+      # remaining monitor.
+      workspace = if hostname == "alakazam" then [
         "1, monitor:DP-1"
         "2, monitor:HDMI-A-1"
         "3, monitor:DP-1"
@@ -201,6 +202,17 @@ in {
         "8, monitor:HDMI-A-1"
         "9, monitor:DP-1"
         "10, monitor:HDMI-A-1"
+      ] else [
+        "1, monitor:DP-3"
+        "2, monitor:eDP-1"
+        "3, monitor:DP-3"
+        "4, monitor:eDP-1"
+        "5, monitor:DP-3"
+        "6, monitor:eDP-1"
+        "7, monitor:DP-3"
+        "8, monitor:eDP-1"
+        "9, monitor:DP-3"
+        "10, monitor:eDP-1"
       ];
 
       # Input configuration
@@ -360,7 +372,6 @@ in {
         # Applications
         "$mod, i, exec, firefox -P uni"
         "$mod SHIFT, i, exec, firefox -P private"
-        "$mod, e, exec, GTK_THEME=Adwaita-dark evolution"
         "$mod, f, exec, hyprpicker -a"
         "$mod, c, exec, hyprshot -m region --clipboard-only"
 
@@ -416,21 +427,6 @@ in {
 
       $close_hints = eww close submap-hints
 
-      bind = ALT, s, exec, eww update submap_name='Sioyek' submap_keys='[{"key":"b","desc":"Open bookmark"},{"key":"B","desc":"Open bookmark (new window)"},{"key":"u","desc":"Update bookmark position"},{"key":"d","desc":"Delete bookmark"}]' && eww open submap-hints --screen "$(hyprctl monitors -j | jq '.[] | select(.focused==true) | .id')"
-      bind = ALT, s, submap, sioyek
-
-      submap = sioyek
-      bind = , b, exec, $close_hints; ~/.config/sioyek/open-bookmark.nu
-      bind = , b, submap, reset
-      bind = SHIFT, b, exec, $close_hints; ~/.config/sioyek/open-bookmark.nu --new-window
-      bind = SHIFT, b, submap, reset
-      bind = , u, exec, $close_hints; ~/.config/sioyek/update-bookmark.nu
-      bind = , u, submap, reset
-      bind = , d, exec, $close_hints; ~/.config/sioyek/delete-bookmark.nu
-      bind = , d, submap, reset
-      bind = , Escape, exec, $close_hints
-      bind = , Escape, submap, reset
-      submap = reset
     '';
   };
 }

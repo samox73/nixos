@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Io
 import Quickshell.Networking
+import Quickshell.Services.Mpris
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
 import Quickshell.WindowManager
@@ -20,6 +21,9 @@ ShellRoot {
     readonly property var audioSink: Pipewire.defaultAudioSink
     readonly property var battery: UPower.displayDevice
     readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
+    readonly property var spotifyPlayer: [...Mpris.players.values].find(player =>
+        player.dbusName.toLowerCase().includes("spotify")
+        || player.identity.toLowerCase().includes("spotify")) ?? null
     readonly property string healthText: `CPU ${health.cpu ?? "--"}%  ${health.temperature ?? "--"}°  RAM ${health.memory ?? "--"}%`
 
     function updateHealth(data): void {
@@ -60,6 +64,14 @@ ShellRoot {
         if (seconds <= 0)
             return "Calculating";
         return `${Math.floor(seconds / 3600)}h ${Math.floor(seconds % 3600 / 60)}m`;
+    }
+
+    function formatTrackTime(seconds): string {
+        if (!Number.isFinite(seconds) || seconds < 0)
+            return "--:--";
+        const minutes = Math.floor(seconds / 60);
+        const remainder = Math.floor(seconds % 60);
+        return `${minutes}:${remainder < 10 ? "0" : ""}${remainder}`;
     }
 
     PwObjectTracker {
@@ -155,6 +167,7 @@ ShellRoot {
                 networkPopup.visible = false;
                 audioPopup.visible = false;
                 bluetoothPopup.visible = false;
+                spotifyPopup.visible = false;
                 calendarPopup.visible = false;
                 weatherPopup.visible = false;
             }
@@ -172,6 +185,14 @@ ShellRoot {
                     : ["nmcli", "-g", "IP4.ADDRESS", "device", "show", bar.activeNetwork.device.name]
                 stdout: StdioCollector {
                     onStreamFinished: bar.networkIp = text.trim().split("\n")[0].split("/")[0] || "--"
+                }
+            }
+
+            Connections {
+                target: root
+                function onSpotifyPlayerChanged(): void {
+                    if (root.spotifyPlayer === null)
+                        spotifyPopup.visible = false;
                 }
             }
 
@@ -443,40 +464,14 @@ ShellRoot {
                             text: `Volume ${root.audioSink === null ? "--" : Math.round(root.audioSink.audio.volume * 100)}%`
                         }
 
-                        Slider {
+                        BarSlider {
                             id: volumeSlider
                             width: parent.width
-                            height: 24
                             from: 0
                             to: 1
                             value: root.audioSink === null ? 0 : root.audioSink.audio.volume
                             enabled: root.audioSink !== null
                             onMoved: root.audioSink.audio.volume = value
-
-                            background: Rectangle {
-                                x: volumeSlider.leftPadding
-                                y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
-                                width: volumeSlider.availableWidth
-                                height: 4
-                                radius: 2
-                                color: "#475258"
-
-                                Rectangle {
-                                    width: volumeSlider.visualPosition * parent.width
-                                    height: parent.height
-                                    radius: parent.radius
-                                    color: "#a7c080"
-                                }
-                            }
-
-                            handle: Rectangle {
-                                x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
-                                y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
-                                width: 14
-                                height: 14
-                                radius: 7
-                                color: volumeSlider.pressed ? "#d3c6aa" : "#a7c080"
-                            }
                         }
 
                         ActionButton {
@@ -664,6 +659,31 @@ ShellRoot {
                     spacing: 6
 
                     BarButton {
+                        id: spotifyButton
+                        visible: root.spotifyPlayer !== null
+                        text: {
+                            if (root.spotifyPlayer === null)
+                                return "";
+                            const title = root.spotifyPlayer.trackTitle || "Spotify";
+                            const shortTitle = title.length > 28 ? `${title.slice(0, 27)}…` : title;
+                            const state = root.spotifyPlayer.playbackState === MprisPlaybackState.Playing
+                                ? "󰐊" : root.spotifyPlayer.playbackState === MprisPlaybackState.Paused ? "󰏤" : "󰓛";
+                            const volume = root.spotifyPlayer.volumeSupported
+                                ? `${Math.round(root.spotifyPlayer.volume * 100)}%` : "--";
+                            return `${state} ${shortTitle}  󰕾 ${volume}`;
+                        }
+                        active: spotifyPopup.visible
+                        onClicked: bar.togglePopup(spotifyPopup)
+                        onScrolled: direction => {
+                            if (root.spotifyPlayer !== null && root.spotifyPlayer.volumeSupported && direction !== 0)
+                                root.spotifyPlayer.volume = Math.max(0, Math.min(1,
+                                    root.spotifyPlayer.volume + direction / 100));
+                        }
+                    }
+
+                    WidgetSeparator { visible: spotifyButton.visible }
+
+                    BarButton {
                         id: clockButton
                         text: Qt.formatDateTime(clock.date, "ddd dd MMM HH:mm:ss")
                         active: calendarPopup.visible
@@ -677,6 +697,221 @@ ShellRoot {
                         text: root.weatherText
                         active: weatherPopup.visible
                         onClicked: bar.togglePopup(weatherPopup)
+                    }
+                }
+            }
+
+            PopupWindow {
+                id: spotifyPopup
+                anchor.window: bar
+                anchor.rect.x: Math.max(0, Math.min(bar.width - width,
+                    rightIsland.x + rightContent.x + spotifyButton.x + spotifyButton.width / 2 - width / 2))
+                anchor.rect.y: bar.height + 8
+                implicitWidth: 440
+                implicitHeight: 390
+                color: "transparent"
+                grabFocus: true
+
+                Timer {
+                    interval: 1000
+                    running: spotifyPopup.visible && root.spotifyPlayer !== null && root.spotifyPlayer.isPlaying
+                    repeat: true
+                    triggeredOnStart: true
+                    onTriggered: root.spotifyPlayer.positionChanged()
+                }
+
+                PopupSurface {
+                    id: spotifyPopupContent
+                    focus: true
+                    Keys.onEscapePressed: spotifyPopup.visible = false
+
+                    Column {
+                        anchors.fill: parent
+                        anchors.margins: 16
+                        spacing: 12
+
+                        Row {
+                            width: parent.width
+                            height: 144
+                            spacing: 14
+
+                            Rectangle {
+                                width: 144
+                                height: 144
+                                radius: 8
+                                color: "#232a2e"
+                                clip: true
+
+                                Image {
+                                    id: spotifyCover
+                                    anchors.fill: parent
+                                    source: root.spotifyPlayer === null ? "" : root.spotifyPlayer.trackArtUrl
+                                    fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                }
+
+                                BarText {
+                                    anchors.centerIn: parent
+                                    visible: spotifyCover.status !== Image.Ready
+                                    text: "󰝚"
+                                    color: "#859289"
+                                    font.pixelSize: 42
+                                }
+                            }
+
+                            Column {
+                                width: parent.width - 158
+                                spacing: 8
+
+                                BarText {
+                                    width: parent.width
+                                    text: root.spotifyPlayer === null ? "Nothing playing"
+                                        : root.spotifyPlayer.trackTitle || "Unknown song"
+                                    font.bold: true
+                                    font.pixelSize: 16
+                                    wrapMode: Text.Wrap
+                                    maximumLineCount: 2
+                                    elide: Text.ElideRight
+                                }
+
+                                BarText {
+                                    width: parent.width
+                                    text: root.spotifyPlayer === null ? ""
+                                        : root.spotifyPlayer.trackArtist || "Unknown artist"
+                                    color: "#a7c080"
+                                    elide: Text.ElideRight
+                                }
+
+                                BarText {
+                                    width: parent.width
+                                    visible: root.spotifyPlayer !== null && root.spotifyPlayer.trackAlbum !== ""
+                                    text: root.spotifyPlayer === null ? "" : `Album  ${root.spotifyPlayer.trackAlbum}`
+                                    color: "#859289"
+                                    wrapMode: Text.Wrap
+                                    maximumLineCount: 3
+                                    elide: Text.ElideRight
+                                }
+                            }
+                        }
+
+                        Column {
+                            width: parent.width
+                            spacing: 3
+
+                            Item {
+                                width: parent.width
+                                height: 18
+
+                                BarText {
+                                    anchors.left: parent.left
+                                    text: root.formatTrackTime(root.spotifyPlayer === null ? 0 : root.spotifyPlayer.position)
+                                    color: "#859289"
+                                }
+
+                                BarText {
+                                    anchors.right: parent.right
+                                    text: root.formatTrackTime(root.spotifyPlayer === null ? 0 : root.spotifyPlayer.length)
+                                    color: "#859289"
+                                }
+                            }
+
+                            BarSlider {
+                                id: spotifyProgress
+                                width: parent.width
+                                from: 0
+                                to: root.spotifyPlayer === null ? 1 : Math.max(1, root.spotifyPlayer.length)
+                                value: root.spotifyPlayer === null ? 0
+                                    : Math.min(root.spotifyPlayer.position, root.spotifyPlayer.length)
+                                enabled: root.spotifyPlayer !== null && root.spotifyPlayer.canSeek
+                                    && root.spotifyPlayer.positionSupported && root.spotifyPlayer.lengthSupported
+                                onMoved: root.spotifyPlayer.position = value
+                            }
+                        }
+
+                        Item {
+                            width: parent.width
+                            height: 42
+
+                            Row {
+                                anchors.centerIn: parent
+                                spacing: 12
+
+                                MediaControlButton {
+                                    text: "󰒟"
+                                    accessibleName: root.spotifyPlayer !== null && root.spotifyPlayer.shuffle
+                                        ? "Disable shuffle" : "Enable shuffle"
+                                    active: root.spotifyPlayer !== null && root.spotifyPlayer.shuffle
+                                    enabled: root.spotifyPlayer !== null && root.spotifyPlayer.canControl
+                                        && root.spotifyPlayer.shuffleSupported
+                                    onClicked: root.spotifyPlayer.shuffle = !root.spotifyPlayer.shuffle
+                                }
+
+                                MediaControlButton {
+                                    text: "󰒮"
+                                    accessibleName: "Previous track"
+                                    enabled: root.spotifyPlayer !== null && root.spotifyPlayer.canGoPrevious
+                                    onClicked: root.spotifyPlayer.previous()
+                                }
+
+                                MediaControlButton {
+                                    width: 48
+                                    text: root.spotifyPlayer !== null && root.spotifyPlayer.isPlaying ? "󰏤" : "󰐊"
+                                    accessibleName: root.spotifyPlayer !== null && root.spotifyPlayer.isPlaying ? "Pause" : "Play"
+                                    enabled: root.spotifyPlayer !== null && root.spotifyPlayer.canTogglePlaying
+                                    onClicked: root.spotifyPlayer.togglePlaying()
+                                }
+
+                                MediaControlButton {
+                                    text: "󰒭"
+                                    accessibleName: "Next track"
+                                    enabled: root.spotifyPlayer !== null && root.spotifyPlayer.canGoNext
+                                    onClicked: root.spotifyPlayer.next()
+                                }
+
+                                MediaControlButton {
+                                    text: root.spotifyPlayer !== null && root.spotifyPlayer.loopState === MprisLoopState.Track
+                                        ? "󰑘" : "󰑖"
+                                    accessibleName: root.spotifyPlayer === null ? "Repeat"
+                                        : `Repeat ${MprisLoopState.toString(root.spotifyPlayer.loopState)}`
+                                    active: root.spotifyPlayer !== null && root.spotifyPlayer.loopState !== MprisLoopState.None
+                                    enabled: root.spotifyPlayer !== null && root.spotifyPlayer.canControl
+                                        && root.spotifyPlayer.loopSupported
+                                    onClicked: root.spotifyPlayer.loopState = root.spotifyPlayer.loopState === MprisLoopState.None
+                                        ? MprisLoopState.Playlist
+                                        : root.spotifyPlayer.loopState === MprisLoopState.Playlist
+                                            ? MprisLoopState.Track : MprisLoopState.None
+                                }
+                            }
+                        }
+
+                        Column {
+                            width: parent.width
+                            spacing: 3
+
+                            BarText {
+                                text: root.spotifyPlayer !== null && root.spotifyPlayer.volumeSupported
+                                    ? `󰕾  Volume ${Math.round(root.spotifyPlayer.volume * 100)}%`
+                                    : "󰕾  Volume --"
+                            }
+
+                            BarSlider {
+                                width: parent.width
+                                from: 0
+                                to: 1
+                                value: root.spotifyPlayer === null ? 0 : root.spotifyPlayer.volume
+                                enabled: root.spotifyPlayer !== null && root.spotifyPlayer.canControl
+                                    && root.spotifyPlayer.volumeSupported
+                                onMoved: root.spotifyPlayer.volume = value
+                            }
+                        }
+                    }
+                }
+
+                onVisibleChanged: {
+                    if (visible) {
+                        spotifyPopupContent.forceActiveFocus();
+                        if (root.spotifyPlayer !== null)
+                            root.spotifyPlayer.positionChanged();
                     }
                 }
             }
@@ -875,6 +1110,76 @@ ShellRoot {
         color: "#2d353b"
         border.color: "#a7c080"
         border.width: 1
+    }
+
+    component BarSlider: Slider {
+        id: slider
+        height: 24
+
+        background: Rectangle {
+            x: slider.leftPadding
+            y: slider.topPadding + slider.availableHeight / 2 - height / 2
+            width: slider.availableWidth
+            height: 4
+            radius: 2
+            color: "#475258"
+
+            Rectangle {
+                width: slider.visualPosition * parent.width
+                height: parent.height
+                radius: parent.radius
+                color: "#a7c080"
+            }
+        }
+
+        handle: Rectangle {
+            x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
+            y: slider.topPadding + slider.availableHeight / 2 - height / 2
+            width: 14
+            height: 14
+            radius: 7
+            color: slider.pressed ? "#d3c6aa" : "#a7c080"
+        }
+    }
+
+    component MediaControlButton: Rectangle {
+        id: mediaAction
+        property alias text: mediaActionLabel.text
+        property string accessibleName: "Media control"
+        property bool active: false
+        signal clicked()
+
+        width: 40
+        height: 40
+        radius: 12
+        color: mediaActionMouse.containsMouse ? "#475258" : "transparent"
+        opacity: enabled ? 1 : 0.35
+        activeFocusOnTab: enabled
+        Accessible.role: Accessible.Button
+        Accessible.name: accessibleName
+
+        Behavior on color {
+            ColorAnimation { duration: 100 }
+        }
+
+        BarText {
+            id: mediaActionLabel
+            anchors.centerIn: parent
+            color: mediaAction.active ? "#a7c080" : "#d3c6aa"
+            font.pixelSize: 20
+        }
+
+        MouseArea {
+            id: mediaActionMouse
+            anchors.fill: parent
+            enabled: mediaAction.enabled
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: mediaAction.clicked()
+        }
+
+        Keys.onSpacePressed: clicked()
+        Keys.onReturnPressed: clicked()
     }
 
     component ActionButton: Rectangle {
