@@ -274,7 +274,7 @@ in {
         ];
       };
 
-      # Keybindings - using ALT (Mod1) to match your Sway config
+      # Keybindings
       "$mod" = "ALT";
 
       bind = [

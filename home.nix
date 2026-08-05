@@ -65,7 +65,6 @@ in {
     ./modules/hyprland.nix
     ./modules/rofi.nix
     ./modules/mako.nix
-    ./modules/sway.nix
   ];
 
   home.stateVersion = "25.11";
@@ -104,9 +103,6 @@ in {
     grim
     gh
     rofi
-    swaybg
-    swayidle
-    swaylock
     sioyek
     zotero
     kdePackages.okular
@@ -127,7 +123,6 @@ in {
     networkmanagerapplet  # nm-connection-editor GUI for WPA-Enterprise (eduroam)
     pavucontrol
     ueberzugpp            # for image previews in yazi file browser
-    sway-contrib.grimshot # for easier screenshots in wayland
     wl-color-picker
     hyprpicker
     obs-studio

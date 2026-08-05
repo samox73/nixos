@@ -115,10 +115,6 @@
     steam = {
       enable = true;
     };
-    sway = {
-      enable = true;
-      wrapperFeatures.gtk = true;
-    };
     hyprland = {
       enable = true;
       withUWSM = true;
