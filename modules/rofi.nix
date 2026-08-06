@@ -25,7 +25,6 @@
     configuration {
      font: "Iosevka Nerd Font 10";
      show-icons: true;
-     icon-theme: "Numix";
      display-drun: "";
      drun-display-format: "{name}";
      disable-history: false;

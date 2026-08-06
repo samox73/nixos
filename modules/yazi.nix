@@ -1,6 +1,7 @@
 { ... }: {
   programs.yazi = {
     enable = true;
+    shellWrapperName = "yy";
     settings = {
       preview = {
         image_filter = "lanczos3";

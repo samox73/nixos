@@ -23,7 +23,7 @@ update:
 update-commit: update switch
 	git add flake.lock && git commit -m "update flake inputs"
 
-# Remove old generations (keeps last 5)
+# Remove generations older than 30 days
 gc:
 	sudo nix-collect-garbage --delete-older-than 30d
 	sudo nixos-rebuild boot --flake $(FLAKE)#$(HOST)

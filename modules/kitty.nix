@@ -1,6 +1,6 @@
 { ... }: {
   # Graphics-capable terminal — used by `phy` so euporie can render matplotlib
-  # plots crisply inline (kitty graphics protocol). Theme/font mirror alacritty.
+  # plots crisply inline (kitty graphics protocol).
   programs.kitty = {
     enable = true;
     font = {

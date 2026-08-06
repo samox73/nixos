@@ -1,4 +1,4 @@
-{ config, pkgs, pkgs-unstable, pkgs-rnote, nvim-config, hostname, ... }:
+{ config, pkgs, pkgs-unstable, pkgs-rnote, nvim-config, ... }:
 let
   androidBuildToolsVersion = "34.0.0";
   androidPlatformVersion = "34";
@@ -56,7 +56,6 @@ let
   '';
 in {
   imports = [
-    ./modules/alacritty.nix
     ./modules/git.nix
     ./modules/neovim.nix
     ./modules/yazi.nix
@@ -128,7 +127,6 @@ in {
     slack
     pkgs-unstable.everforest-gtk-theme
     everforest-cursors
-    eww                  # widget system for submap hints
     jq                   # JSON processing
     litecli
     bat                  # syntax-highlighted cat
@@ -208,13 +206,13 @@ in {
     freeglut     # GLUT library
     glew         # GLEW library
     opencv       # OpenCV library
-    xorg.libX11  # X11 library
-    xorg.libXi   # X11 input extension
-    xorg.libXmu  # X11 miscellaneous utilities
+    libx11       # X11 library
+    libxi        # X11 input extension
+    libxmu       # X11 miscellaneous utilities
     wayland
     libxkbcommon
-    xorg.libXcursor
-    xorg.libXrandr
+    libxcursor
+    libxrandr
 
     # Vulkan development
     vulkan-tools             # vulkaninfo, vkcube
@@ -353,64 +351,6 @@ in {
     }
   '';
 
-  xdg.configFile."eww/eww.yuck".text = ''
-    (defvar submap_name "")
-    (defvar submap_keys '[{"key": "", "desc": ""}]')
-
-    (defwindow submap-hints
-      :monitor 0
-      :geometry (geometry :x "0%" :y "10%" :anchor "top center")
-      :stacking "overlay"
-      :focusable false
-      :namespace "submap-hints"
-      (box :class "submap-popup" :orientation "vertical" :space-evenly false :spacing 10
-        (label :class "submap-title" :halign "center" :text submap_name)
-        (box :class "submap-keys" :orientation "vertical" :spacing 6
-          (for entry in submap_keys
-            (box :orientation "horizontal" :space-evenly false :spacing 10
-              (label :class "submap-key" :text "''${entry.key}")
-              (label :class "submap-desc" :text "''${entry.desc}"))))
-        (label :class "submap-escape" :halign "center" :text "Esc to cancel")))
-  '';
-
-  xdg.configFile."eww/eww.scss".text = ''
-    .submap-popup {
-      background-color: #2d353b;
-      border: 2px solid #a7c080;
-      border-radius: 8px;
-      padding: 15px 20px;
-    }
-
-    .submap-title {
-      color: #a7c080;
-      font-size: 16px;
-      font-weight: bold;
-      margin-bottom: 4px;
-    }
-
-    .submap-key {
-      color: #dbbc7f;
-      font-family: "JetBrainsMono Nerd Font";
-      font-size: 14px;
-      font-weight: bold;
-      background-color: #475258;
-      padding: 2px 8px;
-      border-radius: 4px;
-      min-width: 20px;
-    }
-
-    .submap-desc {
-      color: #d3c6aa;
-      font-size: 14px;
-    }
-
-    .submap-escape {
-      color: #859289;
-      font-size: 12px;
-      margin-top: 4px;
-    }
-  '';
-
   xdg.configFile."sioyek/prefs_user.config".text = ''
     # Everforest dark colors
     custom_background_color 0.176 0.208 0.231
@@ -454,31 +394,15 @@ in {
   gtk = {
     enable = true;
 
-    iconTheme = {
-      name = "everforest-cursors";
-      package = pkgs.everforest-cursors;
-    };
-
     theme = {
       name = "Everforest-Dark";
       package = pkgs-unstable.everforest-gtk-theme;
     };
 
-    cursorTheme = {
-      name = "everforest-cursors";
-      package = pkgs.everforest-cursors;
-    };
-
-    gtk3.extraConfig = {
-      Settings = ''
-        gtk-application-prefer-dark-theme=1
-      '';
-    };
-
-    gtk4.extraConfig = {
-      Settings = ''
-        gtk-application-prefer-dark-theme=1
-      '';
+    gtk3.extraConfig.gtk-application-prefer-dark-theme = 1;
+    gtk4 = {
+      extraConfig.gtk-application-prefer-dark-theme = 1;
+      theme = config.gtk.theme;
     };
     # gtk4.extraCss = builtins.readFile "${pkgs-unstable.everforest-gtk-theme}/share/themes/Everforest-Dark/gtk-4.0/gtk.css";
   };

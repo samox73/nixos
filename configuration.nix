@@ -64,21 +64,9 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
   nixpkgs.config.android_sdk.accept_license = true;
-  # TODO: check if obsidian/slack/whatsapp-electron has moved to a newer electron and this can be removed
-  nixpkgs.config.permittedInsecurePackages = [
-    "electron-39.8.10"
-  ];
-
   nix.settings.experimental-features = [
     "nix-command"
     "flakes"
-  ];
-
-  # List packages installed in system profile. To search, run:
-  # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    mcp-nixos
-    cmake
   ];
 
   # Stable Codex defaults live at system scope so ~/.codex/config.toml remains
@@ -119,10 +107,10 @@
       libGL
       wayland
       libxkbcommon
-      xorg.libX11
-      xorg.libXcursor
-      xorg.libXi
-      xorg.libXrandr
+      libx11
+      libxcursor
+      libxi
+      libxrandr
       vulkan-loader
       vulkan-validation-layers
     ];
@@ -217,7 +205,8 @@
     polkit.addRule(function(action, subject) {
       if (action.id === "org.freedesktop.policykit.exec") {
         var program = action.lookup("program");
-        if (program && program.indexOf("input-remapper-control") !== -1 &&
+        if ((program === "${config.services.input-remapper.package}/bin/input-remapper-control" ||
+             program === "/run/current-system/sw/bin/input-remapper-control") &&
             subject.isInGroup("input")) {
           return polkit.Result.YES;
         }

@@ -159,6 +159,7 @@ in {
 
   wayland.windowManager.hyprland = {
     enable = true;
+    configType = "hyprlang";
     package = pkgs.hyprland;
     plugins = [ pkgs.hyprlandPlugins.hy3 ];
     systemd.enable = false;
@@ -181,7 +182,6 @@ in {
 
       # Startup applications
       exec-once = [
-        "eww daemon"
         "qs -c samox"
         "mako"
         "mkdir -p /home/samox/gdrive && rclone mount gdrive: /home/samox/gdrive --vfs-cache-mode full"
@@ -429,8 +429,6 @@ in {
       bindd = , Return, Exit resize mode, submap, reset
       bindd = , Escape, Exit resize mode, submap, reset
       submap = reset
-
-      $close_hints = eww close submap-hints
 
     '';
   };
