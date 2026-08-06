@@ -4,7 +4,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-rnote.url = "github:NixOS/nixpkgs/9da7f1cf7f8a6e2a7cb3001b048546c92a8258b4";
     nvim-config = {
       url = "github:samox73/nvim/main";
       flake = false;
@@ -16,14 +15,10 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { nixpkgs, nixpkgs-unstable, nixpkgs-rnote, nvim-config, home-manager, rust-overlay, ... }:
+  outputs = { nixpkgs, nixpkgs-unstable, nvim-config, home-manager, rust-overlay, ... }:
     let
       system = "x86_64-linux";
       pkgs-unstable = import nixpkgs-unstable {
-        inherit system;
-        config.allowUnfree = true;
-      };
-      pkgs-rnote = import nixpkgs-rnote {
         inherit system;
         config.allowUnfree = true;
       };
@@ -43,7 +38,7 @@
 	  home-manager.useGlobalPkgs = true;
 	  home-manager.useUserPackages = true;
 	  home-manager.users.samox = import ./home.nix;
-	  home-manager.extraSpecialArgs = { inherit pkgs-unstable pkgs-rnote nvim-config; hostname = "alakazam"; };
+	  home-manager.extraSpecialArgs = { inherit pkgs-unstable nvim-config; hostname = "alakazam"; };
 	}
       ];
     };
@@ -61,7 +56,7 @@
 	  home-manager.useGlobalPkgs = true;
 	  home-manager.useUserPackages = true;
 	  home-manager.users.samox = import ./home.nix;
-	  home-manager.extraSpecialArgs = { inherit pkgs-unstable pkgs-rnote nvim-config; hostname = "umbreon"; };
+	  home-manager.extraSpecialArgs = { inherit pkgs-unstable nvim-config; hostname = "umbreon"; };
 	}
       ];
     };

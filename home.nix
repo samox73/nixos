@@ -1,4 +1,4 @@
-{ config, pkgs, pkgs-unstable, pkgs-rnote, nvim-config, ... }:
+{ config, pkgs, pkgs-unstable, nvim-config, ... }:
 let
   androidBuildToolsVersion = "34.0.0";
   androidPlatformVersion = "34";
@@ -90,7 +90,7 @@ in {
     xournalpp
     krita
     gimp
-    pkgs-rnote.rnote
+    rnote
     libwacom
     libinput
     glib
