@@ -38,6 +38,11 @@ def activate-nvim [] {
 
 # Rebuild NixOS or restart configured applications.
 export module reload {
+  export def main [] {
+    nix
+    quickshell
+  }
+
   # Rebuild and activate the current NixOS configuration.
   export def nix [] {
     sudo nixos-rebuild switch --flake ~/.config/nixos

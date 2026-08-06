@@ -659,7 +659,7 @@ ShellRoot {
                             width: ListView.view.width
                             height: 40
                             radius: 8
-                            color: bluetoothDeviceMouse.containsMouse ? "#3d484d" : "transparent"
+                            color: bluetoothDeviceMouse.containsMouse ? "#3d484d" : "#003d484d"
 
                             Behavior on color {
                                 ColorAnimation { duration: 100 }
@@ -738,7 +738,7 @@ ShellRoot {
                             height: 24
                             radius: 8
                             color: modelData.active ? "#a7c080"
-                                : workspaceMouse.containsMouse ? "#3d484d" : "transparent"
+                                : workspaceMouse.containsMouse ? "#3d484d" : "#003d484d"
 
                             Behavior on color {
                                 ColorAnimation { duration: 100 }
@@ -948,7 +948,10 @@ ShellRoot {
                                     : Math.min(root.spotifyPlayer.position, root.spotifyPlayer.length)
                                 enabled: root.spotifyPlayer !== null && root.spotifyPlayer.canSeek
                                     && root.spotifyPlayer.positionSupported && root.spotifyPlayer.lengthSupported
-                                onMoved: root.spotifyPlayer.position = value
+                                onPressedChanged: {
+                                    if (!pressed && root.spotifyPlayer !== null)
+                                        root.spotifyPlayer.position = value;
+                                }
                             }
                         }
 
@@ -1042,6 +1045,12 @@ ShellRoot {
 
             PopupWindow {
                 id: calendarPopup
+                property date displayedMonth: clock.date
+
+                function changeMonth(offset): void {
+                    displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + offset, 1);
+                }
+
                 anchor.window: bar
                 anchor.rect.x: Math.max(0, Math.min(bar.width - width,
                     rightIsland.x + rightContent.x + clockButton.x + clockButton.width / 2 - width / 2))
@@ -1061,9 +1070,36 @@ ShellRoot {
                         anchors.margins: 16
                         spacing: 6
 
-                        BarText {
-                            text: Qt.formatDate(clock.date, "MMMM yyyy")
-                            font.bold: true
+                        Item {
+                            width: parent.width
+                            height: 24
+
+                            BarText {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: Qt.formatDate(calendarPopup.displayedMonth, "MMMM yyyy")
+                                font.bold: true
+                            }
+
+                            MediaControlButton {
+                                id: nextMonthButton
+                                anchors.right: parent.right
+                                width: 24
+                                height: 24
+                                text: "↓"
+                                accessibleName: "Next month"
+                                onClicked: calendarPopup.changeMonth(1)
+                            }
+
+                            MediaControlButton {
+                                anchors.right: nextMonthButton.left
+                                anchors.rightMargin: 4
+                                width: 24
+                                height: 24
+                                text: "↑"
+                                accessibleName: "Previous month"
+                                onClicked: calendarPopup.changeMonth(-1)
+                            }
                         }
 
                         DayOfWeekRow {
@@ -1081,9 +1117,9 @@ ShellRoot {
                         MonthGrid {
                             id: monthGrid
                             width: parent.width
-                            height: 236
-                            month: clock.date.getMonth()
-                            year: clock.date.getFullYear()
+                            height: 228
+                            month: calendarPopup.displayedMonth.getMonth()
+                            year: calendarPopup.displayedMonth.getFullYear()
                             locale: Qt.locale()
                             delegate: Rectangle {
                                 required property var model
@@ -1100,11 +1136,19 @@ ShellRoot {
                             }
                         }
                     }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.NoButton
+                        onWheel: wheel => calendarPopup.changeMonth(-Math.sign(wheel.angleDelta.y))
+                    }
                 }
 
                 onVisibleChanged: {
-                    if (visible)
+                    if (visible) {
+                        displayedMonth = clock.date;
                         calendarPopupContent.forceActiveFocus();
+                    }
                 }
             }
 
@@ -1411,7 +1455,7 @@ ShellRoot {
         width: buttonLabel.implicitWidth + 12
         height: 24
         radius: 8
-        color: buttonMouse.containsMouse || active ? "#3d484d" : "transparent"
+        color: buttonMouse.containsMouse || active ? "#3d484d" : "#003d484d"
 
         Behavior on color {
             ColorAnimation { duration: 100 }
@@ -1481,7 +1525,7 @@ ShellRoot {
         width: 40
         height: 40
         radius: 12
-        color: mediaActionMouse.containsMouse ? "#475258" : "transparent"
+        color: mediaActionMouse.containsMouse ? "#475258" : "#00475258"
         opacity: enabled ? 1 : 0.35
         activeFocusOnTab: enabled
         Accessible.role: Accessible.Button
