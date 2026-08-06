@@ -7,6 +7,7 @@ import Quickshell.Networking
 import Quickshell.Services.Mpris
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
+import Quickshell.Wayland
 import Quickshell.WindowManager
 
 ShellRoot {
@@ -18,6 +19,22 @@ ShellRoot {
     property var weather: ({ temperature: "--", feelsLike: "--", description: "Unavailable", humidity: "--", wind: "--" })
     property var forecast: []
     property string weatherText: "Vienna: --"
+    property bool shortcutOverlayVisible: false
+    property bool shortcutSearchActive: false
+    property string shortcutSearch: ""
+    property var shortcuts: []
+    readonly property string shortcutSearchQuery: shortcutSearch.trim()
+    readonly property var filteredShortcuts: shortcutSearchQuery === ""
+        ? shortcuts
+        : shortcuts.filter(binding => shortcutMatches(binding, shortcutSearchQuery))
+    readonly property var shortcutGroups: [
+        { title: "Windows & Focus", column: 0, shortcuts: filteredShortcuts.filter(binding => shortcutGroup(binding) === "windows") },
+        { title: "Applications", column: 0, shortcuts: filteredShortcuts.filter(binding => shortcutGroup(binding) === "applications") },
+        { title: "Workspaces", column: 1, shortcuts: filteredShortcuts.filter(binding => shortcutGroup(binding) === "workspaces") },
+        { title: "Custom", column: 1, shortcuts: filteredShortcuts.filter(binding => shortcutGroup(binding) === "custom") },
+        { title: "Layout & Groups", column: 2, shortcuts: filteredShortcuts.filter(binding => shortcutGroup(binding) === "layout") },
+        { title: "System & Media", column: 2, shortcuts: filteredShortcuts.filter(binding => shortcutGroup(binding) === "system") }
+    ]
     readonly property var audioSink: Pipewire.defaultAudioSink
     readonly property var battery: UPower.displayDevice
     readonly property var bluetoothAdapter: Bluetooth.defaultAdapter
@@ -74,6 +91,92 @@ ShellRoot {
         return `${minutes}:${remainder < 10 ? "0" : ""}${remainder}`;
     }
 
+    function shortcutLabel(binding): string {
+        const keys = [];
+        if (binding.modmask & 64) keys.push("Super");
+        if (binding.modmask & 4) keys.push("Ctrl");
+        if (binding.modmask & 8) keys.push("Alt");
+        if (binding.modmask & 1) keys.push("Shift");
+
+        const names = {
+            Return: "Enter",
+            TAB: "Tab",
+            space: "Space",
+            slash: "/",
+            period: ".",
+            comma: ",",
+            "mouse:272": "LMB",
+            "mouse:273": "RMB",
+            XF86MonBrightnessUp: "Brightness Up",
+            XF86MonBrightnessDown: "Brightness Down",
+            XF86AudioRaiseVolume: "Volume Up",
+            XF86AudioLowerVolume: "Volume Down",
+            XF86AudioNext: "Next",
+            XF86AudioPrev: "Previous"
+        };
+        const key = names[binding.key] ?? (binding.key.length === 1
+            ? binding.key.toUpperCase() : binding.key);
+        keys.push(key);
+        return keys.join("+");
+    }
+
+    function shortcutMatches(binding, query): bool {
+        const needle = query.toLowerCase();
+        return shortcutLabel(binding).toLowerCase().replace(/\s/g, "")
+            .includes(needle.replace(/\s/g, ""))
+            || binding.description.toLowerCase().includes(needle);
+    }
+
+    function shortcutGroup(binding): string {
+        if (["workspace", "hy3:movetoworkspace", "movecurrentworkspacetomonitor"].includes(binding.dispatcher)
+            || binding.description === "Move all windows to another workspace")
+            return "workspaces";
+        if (binding.submap === "resize" || ["hy3:makegroup", "hy3:changefocus", "submap",
+            "hy3:focustab", "hy3:changegroup", "resizeactive"].includes(binding.dispatcher))
+            return "layout";
+        if (["hy3:killactive", "hy3:movefocus", "focusmonitor", "movewindow", "hy3:movewindow",
+            "fullscreen", "togglefloating", "mouse"].includes(binding.dispatcher))
+            return "windows";
+        if (["Open terminal", "Open application launcher", "Open university Firefox",
+            "Open private Firefox"].includes(binding.description))
+            return "applications";
+        if (["Lock screen", "Increase brightness", "Decrease brightness", "Next track", "Previous track",
+            "Toggle Spotify playback", "Increase volume", "Decrease volume"].includes(binding.description))
+            return "system";
+        return "custom";
+    }
+
+    function escapeHtml(text): string {
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function highlightMatch(text, query): string {
+        const index = text.toLowerCase().indexOf(query.toLowerCase());
+        if (query === "" || index < 0)
+            return escapeHtml(text);
+        return `${escapeHtml(text.slice(0, index))}<span style="background-color:#a7c080;color:#2d353b">${escapeHtml(text.slice(index, index + query.length))}</span>${escapeHtml(text.slice(index + query.length))}`;
+    }
+
+    function resetShortcutSearch(): void {
+        shortcutSearch = "";
+        shortcutSearchActive = false;
+    }
+
+    function closeShortcutOverlay(): void {
+        shortcutOverlayVisible = false;
+        resetShortcutSearch();
+    }
+
+    function toggleShortcutOverlay(): void {
+        if (shortcutOverlayVisible) {
+            closeShortcutOverlay();
+        } else {
+            resetShortcutSearch();
+            shortcutOverlayVisible = true;
+            shortcutProcess.running = true;
+        }
+    }
+
     PwObjectTracker {
         objects: [root.audioSink]
     }
@@ -92,6 +195,25 @@ ShellRoot {
         stdout: StdioCollector {
             onStreamFinished: root.updateWeather(text)
         }
+    }
+
+    Process {
+        id: shortcutProcess
+        command: ["hyprctl", "binds", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.shortcuts = JSON.parse(text).filter(binding => binding.has_description);
+                } catch (error) {
+                    console.warn(`Invalid Hyprland shortcut list: ${error}`);
+                }
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "shortcuts"
+        function toggle(): void { root.toggleShortcutOverlay(); }
     }
 
     Timer {
@@ -1058,6 +1180,210 @@ ShellRoot {
                     if (visible)
                         weatherPopupContent.forceActiveFocus();
                 }
+            }
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        PanelWindow {
+            id: shortcutOverlay
+            required property ShellScreen modelData
+
+            screen: modelData
+            visible: root.shortcutOverlayVisible
+            color: "#e61e2326"
+            exclusionMode: ExclusionMode.Ignore
+            WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+
+            anchors {
+                top: true
+                left: true
+                right: true
+                bottom: true
+            }
+
+            FocusScope {
+                id: shortcutFocus
+                anchors.fill: parent
+                focus: true
+
+                Item {
+                    id: shortcutKeyHandler
+                    anchors.fill: parent
+                    focus: true
+                    Keys.onPressed: event => {
+                        if (event.key === Qt.Key_Slash && event.modifiers === Qt.NoModifier) {
+                            root.shortcutSearchActive = true;
+                            shortcutSearchField.forceActiveFocus();
+                        } else {
+                            root.closeShortcutOverlay();
+                        }
+                        event.accepted = true;
+                    }
+                }
+
+                Rectangle {
+                    id: shortcutCard
+
+                    anchors.centerIn: parent
+                    width: Math.min(parent.width - 80, 1800)
+                    height: Math.min(parent.height - 80, 980)
+                    radius: 18
+                    color: "#2d353b"
+                    border.color: "#a7c080"
+                    border.width: 1
+
+                    BarText {
+                        id: shortcutTitle
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.topMargin: 22
+                        anchors.leftMargin: 24
+                        text: "Keyboard shortcuts"
+                        font.pixelSize: 20
+                        font.bold: true
+                    }
+
+                    BarText {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: shortcutTitle.verticalCenter
+                        anchors.rightMargin: 24
+                        visible: !root.shortcutSearchActive
+                        text: "Press / to search · any other key or click to close"
+                        color: "#859289"
+                    }
+
+                    TextField {
+                        id: shortcutSearchField
+                        anchors.right: parent.right
+                        anchors.verticalCenter: shortcutTitle.verticalCenter
+                        anchors.rightMargin: 24
+                        visible: root.shortcutSearchActive
+                        width: 420
+                        height: 34
+                        leftPadding: 12
+                        rightPadding: 12
+                        placeholderText: "Search keys or effects…"
+                        text: root.shortcutSearch
+                        color: "#d3c6aa"
+                        placeholderTextColor: "#859289"
+                        selectionColor: "#a7c080"
+                        selectedTextColor: "#2d353b"
+                        font.family: "JetBrainsMonoNL Nerd Font Mono"
+                        font.pixelSize: 13
+                        onTextEdited: root.shortcutSearch = text
+                        Keys.onEscapePressed: event => {
+                            root.resetShortcutSearch();
+                            shortcutKeyHandler.forceActiveFocus();
+                            event.accepted = true;
+                        }
+
+                        background: Rectangle {
+                            radius: 8
+                            color: "#232a2e"
+                            border.color: "#a7c080"
+                            border.width: 1
+                        }
+                    }
+
+                    Row {
+                        id: shortcutColumns
+                        anchors.top: shortcutTitle.bottom
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        anchors.topMargin: 18
+                        anchors.leftMargin: 24
+                        anchors.rightMargin: 24
+                        anchors.bottomMargin: 18
+                        spacing: 32
+
+                        Repeater {
+                            model: ScriptModel { values: [0, 1, 2] }
+
+                            Column {
+                                id: shortcutColumn
+                                required property int modelData
+                                width: (shortcutColumns.width - shortcutColumns.spacing * 2) / 3
+                                spacing: 14
+
+                                Repeater {
+                                    model: ScriptModel {
+                                        values: root.shortcutGroups.filter(group =>
+                                            group.column === shortcutColumn.modelData && group.shortcuts.length > 0)
+                                    }
+
+                                    Column {
+                                        id: shortcutGroupColumn
+                                        required property var modelData
+                                        width: shortcutColumn.width
+                                        spacing: 2
+
+                                        BarText {
+                                            width: parent.width
+                                            height: 24
+                                            text: shortcutGroupColumn.modelData.title
+                                            color: "#7fbbb3"
+                                            font.bold: true
+                                            font.pixelSize: 14
+                                        }
+
+                                        Repeater {
+                                            model: ScriptModel { values: shortcutGroupColumn.modelData.shortcuts }
+
+                                            Item {
+                                                id: shortcutRow
+                                                required property var modelData
+                                                width: shortcutGroupColumn.width
+                                                height: 26
+
+                                                BarText {
+                                                    anchors.left: parent.left
+                                                    width: 180
+                                                    text: root.highlightMatch(root.shortcutLabel(shortcutRow.modelData),
+                                                        root.shortcutSearchQuery.replace(/\s/g, ""))
+                                                    textFormat: Text.RichText
+                                                    color: "#a7c080"
+                                                    font.bold: true
+                                                }
+
+                                                BarText {
+                                                    anchors.left: parent.left
+                                                    anchors.right: parent.right
+                                                    anchors.leftMargin: 190
+                                                    text: `${root.highlightMatch(shortcutRow.modelData.description, root.shortcutSearchQuery)}`
+                                                        + (shortcutRow.modelData.submap === "" ? "" : `  [${shortcutRow.modelData.submap}]`)
+                                                    textFormat: Text.RichText
+                                                    elide: Text.ElideRight
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    BarText {
+                        anchors.centerIn: parent
+                        visible: root.filteredShortcuts.length === 0
+                        text: "No matching shortcuts"
+                        color: "#859289"
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onPressed: root.closeShortcutOverlay()
+                }
+            }
+
+            onVisibleChanged: {
+                if (visible)
+                    shortcutKeyHandler.forceActiveFocus();
             }
         }
     }

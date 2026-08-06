@@ -289,121 +289,126 @@ in {
       # Keybindings
       "$mod" = "ALT";
 
-      bind = [
+      bindd = [
         # Terminal
-        "$mod, Return, exec, kitty"
+        "$mod, Return, Open terminal, exec, kitty"
 
         # Window management
-        "$mod, Q, hy3:killactive,"
+        "$mod, Q, Close active window, hy3:killactive,"
 
         # Focus
-        "$mod, h, hy3:movefocus, l"
-        "$mod, j, hy3:movefocus, d"
-        "$mod, k, hy3:movefocus, u"
-        "$mod, l, hy3:movefocus, r"
-        "$mod, period, focusmonitor, +1"
-        "$mod, comma, focusmonitor, -1"
-        "$mod SHIFT, period, movewindow, mon:+1"
-        "$mod SHIFT, comma, movewindow, mon:-1"
+        "$mod, h, Focus left, hy3:movefocus, l"
+        "$mod, j, Focus down, hy3:movefocus, d"
+        "$mod, k, Focus up, hy3:movefocus, u"
+        "$mod, l, Focus right, hy3:movefocus, r"
+        "$mod, period, Focus next monitor, focusmonitor, +1"
+        "$mod, comma, Focus previous monitor, focusmonitor, -1"
+        "$mod SHIFT, period, Move window to next monitor, movewindow, mon:+1"
+        "$mod SHIFT, comma, Move window to previous monitor, movewindow, mon:-1"
 
         # Move windows
-        "$mod SHIFT, h, hy3:movewindow, l"
-        "$mod SHIFT, j, hy3:movewindow, d"
-        "$mod SHIFT, k, hy3:movewindow, u"
-        "$mod SHIFT, l, hy3:movewindow, r"
-        "$mod SHIFT, Left, hy3:movewindow, l"
-        "$mod SHIFT, Down, hy3:movewindow, d"
-        "$mod SHIFT, Up, hy3:movewindow, u"
-        "$mod SHIFT, Right, hy3:movewindow, r"
+        "$mod SHIFT, h, Move window left, hy3:movewindow, l"
+        "$mod SHIFT, j, Move window down, hy3:movewindow, d"
+        "$mod SHIFT, k, Move window up, hy3:movewindow, u"
+        "$mod SHIFT, l, Move window right, hy3:movewindow, r"
+        "$mod SHIFT, Left, Move window left, hy3:movewindow, l"
+        "$mod SHIFT, Down, Move window down, hy3:movewindow, d"
+        "$mod SHIFT, Up, Move window up, hy3:movewindow, u"
+        "$mod SHIFT, Right, Move window right, hy3:movewindow, r"
 
         # Move workspace between monitors
-        "$mod CTRL SHIFT, l, movecurrentworkspacetomonitor, r"
-        "$mod CTRL SHIFT, h, movecurrentworkspacetomonitor, l"
+        "$mod CTRL SHIFT, l, Move workspace to right monitor, movecurrentworkspacetomonitor, r"
+        "$mod CTRL SHIFT, h, Move workspace to left monitor, movecurrentworkspacetomonitor, l"
 
         # Launchers
-        "$mod, space, exec, rofi -modi combi -show combi -combi-modi drun,run -no-levenshtein-sort"
+        "$mod, space, Open application launcher, exec, rofi -modi combi -show combi -combi-modi drun,run -no-levenshtein-sort"
+
+        # Shortcut help
+        "$mod, slash, Show shortcut help, exec, qs -c samox ipc call shortcuts toggle"
+
         # Layout
-        "$mod, b, hy3:makegroup, h"
-        "$mod, b, exec, ${splitIndicator} 0deg"
-        "$mod, v, hy3:makegroup, v"
-        "$mod, v, exec, ${splitIndicator} 90deg"
-        "$mod, a, hy3:changefocus, raise"
-        "$mod, d, hy3:changefocus, lower"
-        "$mod, r, submap, resize"
-        "$mod SHIFT, f, fullscreen, 0"
-        "$mod SHIFT, space, togglefloating,"
+        "$mod, b, Create horizontal split, hy3:makegroup, h"
+        "$mod, v, Create vertical split, hy3:makegroup, v"
+        "$mod, a, Focus parent container, hy3:changefocus, raise"
+        "$mod, d, Focus child container, hy3:changefocus, lower"
+        "$mod, r, Enter resize mode, submap, resize"
+        "$mod SHIFT, f, Toggle fullscreen, fullscreen, 0"
+        "$mod SHIFT, space, Toggle floating, togglefloating,"
 
         # Groups (tabbed containers)
-        "$mod, g, hy3:makegroup, tab, toggle"
-        "$mod, TAB, hy3:focustab, r, wrap"
-        "$mod SHIFT, TAB, hy3:focustab, l, wrap"
-        "$mod SHIFT, g, hy3:changegroup, untab"
+        "$mod, g, Toggle tabbed group, hy3:makegroup, tab, toggle"
+        "$mod, TAB, Focus next tab, hy3:focustab, r, wrap"
+        "$mod SHIFT, TAB, Focus previous tab, hy3:focustab, l, wrap"
+        "$mod SHIFT, g, Remove window from group, hy3:changegroup, untab"
 
         # Workspaces
-        "$mod, 1, workspace, 1"
-        "$mod, 2, workspace, 2"
-        "$mod, 3, workspace, 3"
-        "$mod, 4, workspace, 4"
-        "$mod, 5, workspace, 5"
-        "$mod, 6, workspace, 6"
-        "$mod, 7, workspace, 7"
-        "$mod, 8, workspace, 8"
-        "$mod, 9, workspace, 9"
-        "$mod, 0, workspace, 10"
+        "$mod, 1, Switch to workspace 1, workspace, 1"
+        "$mod, 2, Switch to workspace 2, workspace, 2"
+        "$mod, 3, Switch to workspace 3, workspace, 3"
+        "$mod, 4, Switch to workspace 4, workspace, 4"
+        "$mod, 5, Switch to workspace 5, workspace, 5"
+        "$mod, 6, Switch to workspace 6, workspace, 6"
+        "$mod, 7, Switch to workspace 7, workspace, 7"
+        "$mod, 8, Switch to workspace 8, workspace, 8"
+        "$mod, 9, Switch to workspace 9, workspace, 9"
+        "$mod, 0, Switch to workspace 10, workspace, 10"
 
         # Move to workspace
-        "$mod SHIFT, 1, hy3:movetoworkspace, 1"
-        "$mod SHIFT, 2, hy3:movetoworkspace, 2"
-        "$mod SHIFT, 3, hy3:movetoworkspace, 3"
-        "$mod SHIFT, 4, hy3:movetoworkspace, 4"
-        "$mod SHIFT, 5, hy3:movetoworkspace, 5"
-        "$mod SHIFT, 6, hy3:movetoworkspace, 6"
-        "$mod SHIFT, 7, hy3:movetoworkspace, 7"
-        "$mod SHIFT, 8, hy3:movetoworkspace, 8"
-        "$mod SHIFT, 9, hy3:movetoworkspace, 9"
-        "$mod SHIFT, 0, hy3:movetoworkspace, 10"
-
-        # Clipboard history
-        "$mod CTRL SHIFT, c, exec, clipman pick -t rofi"
+        "$mod SHIFT, 1, Move window to workspace 1, hy3:movetoworkspace, 1"
+        "$mod SHIFT, 2, Move window to workspace 2, hy3:movetoworkspace, 2"
+        "$mod SHIFT, 3, Move window to workspace 3, hy3:movetoworkspace, 3"
+        "$mod SHIFT, 4, Move window to workspace 4, hy3:movetoworkspace, 4"
+        "$mod SHIFT, 5, Move window to workspace 5, hy3:movetoworkspace, 5"
+        "$mod SHIFT, 6, Move window to workspace 6, hy3:movetoworkspace, 6"
+        "$mod SHIFT, 7, Move window to workspace 7, hy3:movetoworkspace, 7"
+        "$mod SHIFT, 8, Move window to workspace 8, hy3:movetoworkspace, 8"
+        "$mod SHIFT, 9, Move window to workspace 9, hy3:movetoworkspace, 9"
+        "$mod SHIFT, 0, Move window to workspace 10, hy3:movetoworkspace, 10"
 
         # Config reload
-        "$mod SHIFT CTRL, r, exec, hyprctl reload"
+        "$mod SHIFT CTRL, r, Reload Hyprland configuration, exec, hyprctl reload"
 
         # Applications
-        "$mod, i, exec, firefox -P uni"
-        "$mod SHIFT, i, exec, firefox -P private"
-        "$mod, f, exec, hyprpicker -a"
-        "$mod, c, exec, hyprshot -m region --clipboard-only"
+        "$mod, i, Open university Firefox, exec, firefox -P uni"
+        "$mod SHIFT, i, Open private Firefox, exec, firefox -P private"
+        "$mod, f, Pick screen color, exec, hyprpicker -a"
+        "$mod, c, Copy region screenshot, exec, hyprshot -m region --clipboard-only"
 
         # Clipboard manager
-        "CTRL SHIFT ALT, c, exec, clipman pick -t rofi --tool-args='-i'"
+        "CTRL SHIFT ALT, c, Search clipboard history, exec, clipman pick -t rofi --tool-args='-i'"
 
         # Lock screen
-        "CTRL SHIFT, F8, exec, hyprlock"
+        "CTRL SHIFT, F8, Lock screen, exec, hyprlock"
 
         # Brightness
-        ", XF86MonBrightnessUp, exec, brightnessctl s +10%"
-        ", XF86MonBrightnessDown, exec, brightnessctl s 10%-"
+        ", XF86MonBrightnessUp, Increase brightness, exec, brightnessctl s +10%"
+        ", XF86MonBrightnessDown, Decrease brightness, exec, brightnessctl s 10%-"
 
         # Media keys
-        ", XF86AudioNext, exec, playerctl next"
-        ", XF86AudioPrev, exec, playerctl previous"
-        "$mod, p, exec, playerctl -p spotify play-pause"
+        ", XF86AudioNext, Next track, exec, playerctl next"
+        ", XF86AudioPrev, Previous track, exec, playerctl previous"
+        "$mod, p, Toggle Spotify playback, exec, playerctl -p spotify play-pause"
 
         # Move all windows from current workspace to another
-        "$mod SHIFT, w, exec, ~/.config/hypr/move-windows.nu"
+        "$mod SHIFT, w, Move all windows to another workspace, exec, ~/.config/hypr/move-windows.nu"
+      ];
+
+      # Secondary actions for the documented layout bindings above.
+      bind = [
+        "$mod, b, exec, ${splitIndicator} 0deg"
+        "$mod, v, exec, ${splitIndicator} 90deg"
       ];
 
       # Volume control (bindl for locked screen support)
-      bindl = [
-        ", XF86AudioRaiseVolume, exec, pamixer -i 1"
-        ", XF86AudioLowerVolume, exec, pamixer -d 1"
+      bindld = [
+        ", XF86AudioRaiseVolume, Increase volume, exec, pamixer -i 1"
+        ", XF86AudioLowerVolume, Decrease volume, exec, pamixer -d 1"
       ];
 
       # Mouse bindings
-      bindm = [
-        "$mod, mouse:272, movewindow"
-        "$mod, mouse:273, resizewindow"
+      bindmd = [
+        "$mod, mouse:272, Move window with mouse, movewindow"
+        "$mod, mouse:273, Resize window with mouse, resizewindow"
       ];
 
     };
@@ -412,17 +417,17 @@ in {
       source = ${config.home.homeDirectory}/.config/hypr/rules.conf
 
       submap = resize
-      binde = , h, resizeactive, -50 0
-      binde = , j, resizeactive, 0 50
-      binde = , k, resizeactive, 0 -50
-      binde = , l, resizeactive, 50 0
-      binde = , left, resizeactive, -50 0
-      binde = , down, resizeactive, 0 50
-      binde = , up, resizeactive, 0 -50
-      binde = , right, resizeactive, 50 0
-      bind = $mod, r, submap, reset
-      bind = , Return, submap, reset
-      bind = , Escape, submap, reset
+      binded = , h, Resize left, resizeactive, -50 0
+      binded = , j, Resize down, resizeactive, 0 50
+      binded = , k, Resize up, resizeactive, 0 -50
+      binded = , l, Resize right, resizeactive, 50 0
+      binded = , left, Resize left, resizeactive, -50 0
+      binded = , down, Resize down, resizeactive, 0 50
+      binded = , up, Resize up, resizeactive, 0 -50
+      binded = , right, Resize right, resizeactive, 50 0
+      bindd = $mod, r, Exit resize mode, submap, reset
+      bindd = , Return, Exit resize mode, submap, reset
+      bindd = , Escape, Exit resize mode, submap, reset
       submap = reset
 
       $close_hints = eww close submap-hints

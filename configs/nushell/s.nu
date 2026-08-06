@@ -1,11 +1,14 @@
+# Interactively select a zoxide directory and copy its path to the clipboard.
 export def copy-zoxide-path [] {
   zoxide query -i | str trim | wl-copy
 }
 
+# Open the PhD library in Neovim.
 export def lib [] {
   nvim /home/samox/studies/phd/library
 }
 
+# Replace regex matches in one file or recursively across all files.
 export def replace-string [
   --all (-a)
   --exclude (-e): string
@@ -22,30 +25,38 @@ export def replace-string [
   }
 }
 
+# Mirror the local PhD directory to Google Drive, deleting stale remote files.
 export def sync-phd [] {
   rclone sync ~/studies/phd gdrive:studies/phd --filter-from ~/studies/phd/.rcloneignore --progress --transfers 8 --checkers 16 --drive-chunk-size 64M
 }
 
+# Update the Neovim flake input and activate the rebuilt NixOS configuration.
 def activate-nvim [] {
   ^nix flake update nvim-config --flake ~/.config/nixos
   sudo nixos-rebuild switch --flake ~/.config/nixos
 }
 
+# Rebuild NixOS or restart configured applications.
 export module reload {
+  # Rebuild and activate the current NixOS configuration.
   export def nix [] {
     sudo nixos-rebuild switch --flake ~/.config/nixos
   }
 
+  # Update the Neovim flake input and activate the rebuilt NixOS configuration.
   export def nvim [] {
     activate-nvim
   }
 
+  # Restart Quickshell with the samox configuration.
   export def quickshell [] {
     pkill quickshell; qs --daemonize -c samox
   }
 }
 
+# Update application-managed dependencies.
 export module update {
+  # Update Neovim plugins, commit and push lockfile changes, then rebuild NixOS.
   export def nvim [] {
     let repo = ($env.HOME | path join repos nvim)
     with-env { XDG_CONFIG_HOME: ($env.HOME | path join repos) } {
@@ -65,18 +76,15 @@ export module update {
   }
 }
 
+# Recover user services from known failure states.
 export module fix {
-  # wl-paste --watch clipman store can wedge (likely Thunderbird's Wayland
-  # clipboard never closing its end of the transfer), blocking copy/paste
-  # system-wide. Restarting it just re-arms the same trap for the next
-  # Thunderbird copy, so this only kills it. Run `s fix clipboard-history`
-  # to turn history recording back on once you actually need it.
+  # Stop a wedged clipboard watcher, disabling history recording.
   export def clipboard [] {
     do -i { ^pkill -f "wl-paste --type text/plain --watch" }
     print "clipboard watcher killed (history recording is now off)"
   }
 
-  # Turn clipboard history recording back on (until it wedges again).
+  # Restart clipboard history recording after it was disabled or wedged.
   export def clipboard-history [] {
     do -i { ^pkill -f "wl-paste --type text/plain --watch" }
     ^bash -c "nohup wl-paste --type text/plain --watch clipman store >/dev/null 2>&1 & disown"
