@@ -36,6 +36,16 @@ def activate-nvim [] {
   sudo nixos-rebuild switch --flake ~/.config/nixos
 }
 
+# Clone repositories needed by local maintenance commands.
+export module init {
+  # Clone the editable Neovim config used by `s update nvim`.
+  export def nvim [] {
+    let repo = ($env.HOME | path join repos nvim)
+    mkdir ($repo | path dirname)
+    ^git clone https://github.com/samox73/nvim $repo
+  }
+}
+
 # Rebuild NixOS or restart configured applications.
 export module reload {
   export def main [] {
@@ -68,12 +78,12 @@ export module update {
       ^nvim --headless '+Lazy! update' +qa
     }
 
-    ^git -C $repo add lazy-lock.json
-    let unchanged = ((^git -C $repo diff --cached --quiet -- lazy-lock.json | complete).exit_code == 0)
+    ^git -C $repo add .
+    let unchanged = ((^git -C $repo diff --cached --quiet | complete).exit_code == 0)
     if not $unchanged {
-      ^git -C $repo commit -m 'Update plugins' -- lazy-lock.json
+      ^git -C $repo commit -m 'Update'
     } else {
-      print 'Plugins already up to date'
+      print 'Nvim already up to date'
     }
 
     ^git -C $repo push
