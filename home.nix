@@ -68,6 +68,10 @@ in {
   ];
 
   home.stateVersion = "25.11";
+  services.copyq = {
+    enable = true;
+    forceXWayland = false;
+  };
 
   home.pointerCursor = {
     name = "everforest-cursors";
@@ -106,7 +110,6 @@ in {
     slurp
     hyprshot
     wl-clipboard
-    clipman
     mako   # notification daemon; dunst 1.13 didn't repaint its Wayland surface while Hyprland was idle
     libnotify
     kanshi
@@ -128,6 +131,8 @@ in {
     pkgs-unstable.everforest-gtk-theme
     everforest-cursors
     jq                   # JSON processing
+    bitwarden-cli
+    oath-toolkit
     litecli
     bat                  # syntax-highlighted cat
     fzf                  # fuzzy finder

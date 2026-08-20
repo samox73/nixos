@@ -42,7 +42,6 @@ ShellRoot {
         player.dbusName.toLowerCase().includes("spotify")
         || player.identity.toLowerCase().includes("spotify")) ?? null
     readonly property string healthText: `CPU ${health.cpu ?? "--"}%  ${health.temperature ?? "--"}°  RAM ${health.memory ?? "--"}%`
-
     function updateHealth(data): void {
         try {
             const sample = JSON.parse(data);
@@ -393,130 +392,94 @@ ShellRoot {
                 }
             }
 
-            PopupWindow {
+            AttachedPopup {
                 id: batteryPopup
-                anchor.window: bar
-                anchor.rect.x: Math.max(0, Math.min(bar.width - width,
-                    leftIsland.x + leftContent.x + batteryButton.x + batteryButton.width / 2 - width / 2))
-                anchor.rect.y: bar.height + 8
+                barWindow: bar
+                tabButton: batteryButton
+                tabXInBar: leftIsland.x + leftContent.x + batteryButton.x
                 implicitWidth: 320
-                implicitHeight: 170
-                color: "transparent"
-                grabFocus: true
+                bodyHeight: 170
 
-                PopupSurface {
-                    id: batteryPopupContent
-                    focus: true
-                    Keys.onEscapePressed: batteryPopup.visible = false
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    spacing: 10
 
-                    Column {
-                        anchors.fill: parent
-                        anchors.margins: 16
-                        spacing: 10
-
-                        BarText {
-                            text: "Battery"
-                            font.bold: true
-                        }
-
-                        BarText { text: `Charge ${Math.round(root.battery.percentage * 100)}%` }
-                        BarText { text: `State ${UPowerDeviceState.toString(root.battery.state).replace(/([a-z])([A-Z])/g, "$1 $2")}` }
-                        BarText {
-                            text: root.battery.state === UPowerDeviceState.FullyCharged
-                                ? "Remaining Fully charged"
-                                : `Remaining ${root.formatDuration(root.battery.state === UPowerDeviceState.Charging
-                                    || root.battery.state === UPowerDeviceState.PendingCharge
-                                    ? root.battery.timeToFull : root.battery.timeToEmpty)}`
-                        }
-                        BarText {
-                            text: `Health ${root.battery.healthSupported ? `${Math.round(root.battery.healthPercentage * 100)}%` : "Unavailable"}`
-                        }
+                    BarText {
+                        text: "Battery"
+                        font.bold: true
                     }
-                }
 
-                onVisibleChanged: {
-                    if (visible)
-                        batteryPopupContent.forceActiveFocus();
+                    BarText { text: `Charge ${Math.round(root.battery.percentage * 100)}%` }
+                    BarText { text: `State ${UPowerDeviceState.toString(root.battery.state).replace(/([a-z])([A-Z])/g, "$1 $2")}` }
+                    BarText {
+                        text: root.battery.state === UPowerDeviceState.FullyCharged
+                            ? "Remaining Fully charged"
+                            : `Remaining ${root.formatDuration(root.battery.state === UPowerDeviceState.Charging
+                                || root.battery.state === UPowerDeviceState.PendingCharge
+                                ? root.battery.timeToFull : root.battery.timeToEmpty)}`
+                    }
+                    BarText {
+                        text: `Health ${root.battery.healthSupported ? `${Math.round(root.battery.healthPercentage * 100)}%` : "Unavailable"}`
+                    }
                 }
             }
 
-            PopupWindow {
+            AttachedPopup {
                 id: healthPopup
-                anchor.window: bar
-                anchor.rect.x: Math.max(0, Math.min(bar.width - width,
-                    leftIsland.x + leftContent.x + healthButton.x + healthButton.width / 2 - width / 2))
-                anchor.rect.y: bar.height + 8
+                barWindow: bar
+                tabButton: healthButton
+                tabXInBar: leftIsland.x + leftContent.x + healthButton.x
                 implicitWidth: 380
-                implicitHeight: 280
-                color: "transparent"
-                grabFocus: true
+                bodyHeight: 280
 
-                PopupSurface {
-                    id: healthPopupContent
-                    focus: true
-                    Keys.onEscapePressed: healthPopup.visible = false
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    spacing: 12
 
-                    Column {
-                        anchors.fill: parent
-                        anchors.margins: 16
-                        spacing: 12
-
-                        BarText {
-                            text: "System Health (last 10 minutes)"
-                            font.bold: true
-                        }
-
-                        UsageGraph {
-                            width: parent.width
-                            height: 90
-                            label: "CPU"
-                            value: root.health.cpu
-                            values: root.cpuHistory
-                            accent: "#7fbbb3"
-                        }
-
-                        UsageGraph {
-                            width: parent.width
-                            height: 90
-                            label: "RAM"
-                            value: root.health.memory
-                            values: root.memoryHistory
-                            accent: "#dbbc7f"
-                        }
-
-                        BarText {
-                            text: `Temperature ${root.health.temperature ?? "--"}°C    Disk ${root.health.disk ?? "--"}%`
-                        }
+                    BarText {
+                        text: "System Health (last 10 minutes)"
+                        font.bold: true
                     }
-                }
 
-                onVisibleChanged: {
-                    if (visible)
-                        healthPopupContent.forceActiveFocus();
+                    UsageGraph {
+                        width: parent.width
+                        height: 90
+                        label: "CPU"
+                        value: root.health.cpu
+                        values: root.cpuHistory
+                        accent: "#7fbbb3"
+                    }
+
+                    UsageGraph {
+                        width: parent.width
+                        height: 90
+                        label: "RAM"
+                        value: root.health.memory
+                        values: root.memoryHistory
+                        accent: "#dbbc7f"
+                    }
+
+                    BarText {
+                        text: `Temperature ${root.health.temperature ?? "--"}°C    Disk ${root.health.disk ?? "--"}%`
+                    }
                 }
             }
 
-            PopupWindow {
+            AttachedPopup {
                 id: networkPopup
-                anchor.window: bar
-                anchor.rect.x: Math.max(0, Math.min(bar.width - width,
-                    leftIsland.x + leftContent.x + networkButton.x + networkButton.width / 2 - width / 2))
-                anchor.rect.y: bar.height + 8
+                barWindow: bar
+                tabButton: networkButton
+                tabXInBar: leftIsland.x + leftContent.x + networkButton.x
                 implicitWidth: 340
-                implicitHeight: networkPopupLayout.implicitHeight + 34
-                color: "transparent"
-                grabFocus: true
+                bodyHeight: networkPopupLayout.implicitHeight + 34
 
-                PopupSurface {
-                    id: networkPopupContent
-                    focus: true
-                    Keys.onEscapePressed: networkPopup.visible = false
-
-                    Column {
-                        id: networkPopupLayout
-                        anchors.fill: parent
-                        anchors.margins: 16
-                        spacing: 10
+                Column {
+                    id: networkPopupLayout
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    spacing: 10
 
                         BarText {
                             text: bar.activeNetwork === null ? "Network: Disconnected" : bar.activeNetwork.name
@@ -543,38 +506,23 @@ ShellRoot {
                                 Quickshell.execDetached(["nm-connection-editor"]);
                             }
                         }
-                    }
                 }
 
-                onVisibleChanged: {
-                    if (visible) {
-                        networkPopupContent.forceActiveFocus();
-                        if (bar.activeNetwork !== null)
-                            networkIpProcess.running = true;
-                    }
-                }
+                onOpened: if (bar.activeNetwork !== null) networkIpProcess.running = true
             }
 
-            PopupWindow {
+            AttachedPopup {
                 id: audioPopup
-                anchor.window: bar
-                anchor.rect.x: Math.max(0, Math.min(bar.width - width,
-                    leftIsland.x + leftContent.x + audioButton.x + audioButton.width / 2 - width / 2))
-                anchor.rect.y: bar.height + 8
+                barWindow: bar
+                tabButton: audioButton
+                tabXInBar: leftIsland.x + leftContent.x + audioButton.x
                 implicitWidth: 340
-                implicitHeight: 160
-                color: "transparent"
-                grabFocus: true
+                bodyHeight: 160
 
-                PopupSurface {
-                    id: audioPopupContent
-                    focus: true
-                    Keys.onEscapePressed: audioPopup.visible = false
-
-                    Column {
-                        anchors.fill: parent
-                        anchors.margins: 16
-                        spacing: 10
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    spacing: 10
 
                         BarText {
                             width: parent.width
@@ -605,32 +553,18 @@ ShellRoot {
                                     root.audioSink.audio.muted = !root.audioSink.audio.muted;
                             }
                         }
-                    }
-                }
-
-                onVisibleChanged: {
-                    if (visible)
-                        audioPopupContent.forceActiveFocus();
                 }
             }
 
-            PopupWindow {
+            AttachedPopup {
                 id: bluetoothPopup
-                anchor.window: bar
-                anchor.rect.x: Math.max(0, Math.min(bar.width - width,
-                    leftIsland.x + leftContent.x + bluetoothButton.x + bluetoothButton.width / 2 - width / 2))
-                anchor.rect.y: bar.height + 8
+                barWindow: bar
+                tabButton: bluetoothButton
+                tabXInBar: leftIsland.x + leftContent.x + bluetoothButton.x
                 implicitWidth: 320
-                implicitHeight: Math.min(320, 58 + Math.max(1, bar.pairedBluetoothDevices.length) * 40)
-                color: "transparent"
-                grabFocus: true
+                bodyHeight: Math.min(320, 58 + Math.max(1, bar.pairedBluetoothDevices.length) * 40)
 
-                PopupSurface {
-                    id: bluetoothPopupContent
-                    focus: true
-                    Keys.onEscapePressed: bluetoothPopup.visible = false
-
-                    BarText {
+                BarText {
                         id: bluetoothTitle
                         anchors.top: parent.top
                         anchors.left: parent.left
@@ -699,12 +633,6 @@ ShellRoot {
                             text: "No paired devices"
                             color: "#859289"
                         }
-                    }
-                }
-
-                onVisibleChanged: {
-                    if (visible)
-                        bluetoothPopupContent.forceActiveFocus();
                 }
             }
 
@@ -824,16 +752,13 @@ ShellRoot {
                 }
             }
 
-            PopupWindow {
+            AttachedPopup {
                 id: spotifyPopup
-                anchor.window: bar
-                anchor.rect.x: Math.max(0, Math.min(bar.width - width,
-                    rightIsland.x + rightContent.x + spotifyButton.x + spotifyButton.width / 2 - width / 2))
-                anchor.rect.y: bar.height + 8
+                barWindow: bar
+                tabButton: spotifyButton
+                tabXInBar: rightIsland.x + rightContent.x + spotifyButton.x
                 implicitWidth: 440
-                implicitHeight: spotifyPopupLayout.implicitHeight + 34
-                color: "transparent"
-                grabFocus: true
+                bodyHeight: spotifyPopupLayout.implicitHeight + 34
 
                 Timer {
                     interval: 1000
@@ -843,16 +768,11 @@ ShellRoot {
                     onTriggered: root.spotifyPlayer.positionChanged()
                 }
 
-                PopupSurface {
-                    id: spotifyPopupContent
-                    focus: true
-                    Keys.onEscapePressed: spotifyPopup.visible = false
-
-                    Column {
-                        id: spotifyPopupLayout
-                        anchors.fill: parent
-                        anchors.margins: 16
-                        spacing: 12
+                Column {
+                    id: spotifyPopupLayout
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    spacing: 12
 
                         Row {
                             width: parent.width
@@ -1031,19 +951,12 @@ ShellRoot {
                                 onMoved: root.spotifyPlayer.volume = value
                             }
                         }
-                    }
                 }
 
-                onVisibleChanged: {
-                    if (visible) {
-                        spotifyPopupContent.forceActiveFocus();
-                        if (root.spotifyPlayer !== null)
-                            root.spotifyPlayer.positionChanged();
-                    }
-                }
+                onOpened: if (root.spotifyPlayer !== null) root.spotifyPlayer.positionChanged()
             }
 
-            PopupWindow {
+            AttachedPopup {
                 id: calendarPopup
                 property date displayedMonth: clock.date
 
@@ -1051,21 +964,13 @@ ShellRoot {
                     displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + offset, 1);
                 }
 
-                anchor.window: bar
-                anchor.rect.x: Math.max(0, Math.min(bar.width - width,
-                    rightIsland.x + rightContent.x + clockButton.x + clockButton.width / 2 - width / 2))
-                anchor.rect.y: bar.height + 8
+                barWindow: bar
+                tabButton: clockButton
+                tabXInBar: rightIsland.x + rightContent.x + clockButton.x
                 implicitWidth: 340
-                implicitHeight: 320
-                color: "transparent"
-                grabFocus: true
+                bodyHeight: 320
 
-                PopupSurface {
-                    id: calendarPopupContent
-                    focus: true
-                    Keys.onEscapePressed: calendarPopup.visible = false
-
-                    Column {
+                Column {
                         anchors.fill: parent
                         anchors.margins: 16
                         spacing: 6
@@ -1135,44 +1040,30 @@ ShellRoot {
                                 }
                             }
                         }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        acceptedButtons: Qt.NoButton
-                        onWheel: wheel => calendarPopup.changeMonth(-Math.sign(wheel.angleDelta.y))
-                    }
                 }
 
-                onVisibleChanged: {
-                    if (visible) {
-                        displayedMonth = clock.date;
-                        calendarPopupContent.forceActiveFocus();
-                    }
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.NoButton
+                    onWheel: wheel => calendarPopup.changeMonth(-Math.sign(wheel.angleDelta.y))
                 }
+
+                onOpened: displayedMonth = clock.date
             }
 
-            PopupWindow {
+            AttachedPopup {
                 id: weatherPopup
-                anchor.window: bar
-                anchor.rect.x: Math.max(0, Math.min(bar.width - width,
-                    rightIsland.x + rightContent.x + weatherButton.x + weatherButton.width / 2 - width / 2))
-                anchor.rect.y: bar.height + 8
+                barWindow: bar
+                tabButton: weatherButton
+                tabXInBar: rightIsland.x + rightContent.x + weatherButton.x
                 implicitWidth: 390
-                implicitHeight: weatherPopupLayout.implicitHeight + 34
-                color: "transparent"
-                grabFocus: true
+                bodyHeight: weatherPopupLayout.implicitHeight + 34
 
-                PopupSurface {
-                    id: weatherPopupContent
-                    focus: true
-                    Keys.onEscapePressed: weatherPopup.visible = false
-
-                    Column {
-                        id: weatherPopupLayout
-                        anchors.fill: parent
-                        anchors.margins: 16
-                        spacing: 9
+                Column {
+                    id: weatherPopupLayout
+                    anchors.fill: parent
+                    anchors.margins: 16
+                    spacing: 9
 
                         BarText {
                             width: parent.width
@@ -1217,12 +1108,6 @@ ShellRoot {
                             text: "Forecast unavailable"
                             color: "#859289"
                         }
-                    }
-                }
-
-                onVisibleChanged: {
-                    if (visible)
-                        weatherPopupContent.forceActiveFocus();
                 }
             }
         }
@@ -1432,6 +1317,137 @@ ShellRoot {
         }
     }
 
+    component AttachedPopup: PopupWindow {
+        id: popup
+        required property var barWindow
+        required property Item tabButton
+        required property real tabXInBar
+        required property real bodyHeight
+        default property alias bodyData: body.data
+        readonly property real popupX: Math.max(0, Math.min(barWindow.width - width,
+            tabXInBar + tabButton.width / 2 - width / 2))
+        readonly property real tabX: tabXInBar - popupX
+        readonly property real tabWidth: tabButton.width
+        readonly property real bodyTop: barWindow.height - 1
+        readonly property real shoulder: width > tabWidth ? tabButton.radius : 0
+        signal opened()
+
+        anchor.window: barWindow
+        anchor.rect.x: popupX
+        anchor.rect.y: 0
+        implicitHeight: bodyTop + bodyHeight
+        color: "transparent"
+        grabFocus: true
+
+        mask: Region {
+            Region {
+                x: popup.tabX
+                width: popup.tabWidth
+                height: popup.bodyTop
+            }
+            Region {
+                y: popup.bodyTop
+                width: popup.width
+                height: popup.height - y
+            }
+        }
+
+        Item {
+            id: popupFocus
+            anchors.fill: parent
+            focus: true
+            Keys.onEscapePressed: popup.visible = false
+
+            Canvas {
+                id: popupShape
+                anchors.fill: parent
+
+                onPaint: {
+                    const ctx = getContext("2d");
+                    const half = 0.5;
+                    const left = half;
+                    const right = width - half;
+                    const top = popup.bodyTop + half;
+                    const bottom = height - half;
+                    const tabLeft = popup.tabX + half;
+                    const tabRight = popup.tabX + popup.tabWidth - half;
+                    const tabTop = half;
+                    const tabRadius = popup.tabButton.radius;
+                    const bodyRadius = 10;
+                    const shoulder = popup.shoulder;
+
+                    ctx.clearRect(0, 0, width, height);
+                    ctx.fillStyle = "#2d353b";
+                    ctx.strokeStyle = "#a7c080";
+                    ctx.beginPath();
+                    ctx.moveTo(left, top + bodyRadius);
+                    ctx.quadraticCurveTo(left, top, left + bodyRadius, top);
+                    ctx.lineTo(tabLeft - shoulder, top);
+                    ctx.quadraticCurveTo(tabLeft, top, tabLeft, top - shoulder);
+                    ctx.lineTo(tabLeft, tabTop + tabRadius);
+                    ctx.quadraticCurveTo(tabLeft, tabTop, tabLeft + tabRadius, tabTop);
+                    ctx.lineTo(tabRight - tabRadius, tabTop);
+                    ctx.quadraticCurveTo(tabRight, tabTop, tabRight, tabTop + tabRadius);
+                    ctx.lineTo(tabRight, top - shoulder);
+                    ctx.quadraticCurveTo(tabRight, top, tabRight + shoulder, top);
+                    ctx.lineTo(right - bodyRadius, top);
+                    ctx.quadraticCurveTo(right, top, right, top + bodyRadius);
+                    ctx.lineTo(right, bottom - bodyRadius);
+                    ctx.quadraticCurveTo(right, bottom, right - bodyRadius, bottom);
+                    ctx.lineTo(left + bodyRadius, bottom);
+                    ctx.quadraticCurveTo(left, bottom, left, bottom - bodyRadius);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.save();
+                    ctx.clip();
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                onWidthChanged: requestPaint()
+                onHeightChanged: requestPaint()
+                onVisibleChanged: if (visible) requestPaint()
+            }
+
+            BarText {
+                x: popup.tabX
+                y: Math.round((popup.bodyTop - popup.tabButton.height) / 2)
+                width: popup.tabWidth
+                height: popup.tabButton.height
+                text: popup.tabButton.text
+                horizontalAlignment: Text.AlignHCenter
+            }
+
+            MouseArea {
+                x: popup.tabX
+                width: popup.tabWidth
+                height: popup.bodyTop
+                cursorShape: Qt.PointingHandCursor
+                onClicked: popup.visible = false
+                onWheel: wheel => popup.tabButton.scrolled(Math.sign(wheel.angleDelta.y))
+            }
+
+            Item {
+                id: body
+                x: 1
+                y: popup.bodyTop + 1
+                width: parent.width - 2
+                height: popup.bodyHeight - 2
+            }
+        }
+
+        onVisibleChanged: {
+            if (visible) {
+                popupShape.requestPaint();
+                popupFocus.forceActiveFocus();
+                opened();
+            }
+        }
+        onTabXChanged: popupShape.requestPaint()
+        onTabWidthChanged: popupShape.requestPaint()
+    }
+
     component BarText: Text {
         color: "#d3c6aa"
         font.family: "JetBrainsMonoNL Nerd Font Mono"
@@ -1474,15 +1490,6 @@ ShellRoot {
             onClicked: button.clicked()
             onWheel: wheel => button.scrolled(Math.sign(wheel.angleDelta.y))
         }
-    }
-
-    component PopupSurface: Rectangle {
-        anchors.fill: parent
-        anchors.margins: 1
-        radius: 10
-        color: "#2d353b"
-        border.color: "#a7c080"
-        border.width: 1
     }
 
     component BarSlider: Slider {

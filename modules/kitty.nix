@@ -11,6 +11,7 @@
       window_padding_width = 10;
       confirm_os_window_close = 0;
       scrollback_lines = 20000;
+      scrollback_pager = "nvim --cmd 'set eventignore=FileType' +'silent autocmd! TrimNvim' +'silent autocmd! TrimHighlight' +'call clearmatches()' +'nnoremap q ZQ' +'call nvim_open_term(0, {})' +'set nomodified nolist' +'$' -";
 
       # Everforest Dark
       background = "#2d353b";

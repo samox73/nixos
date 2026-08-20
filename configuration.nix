@@ -138,6 +138,7 @@
     git = {
       enable = true;
     };
+    ssh.startAgent = true;
   };
 
   # Bluetooth

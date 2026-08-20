@@ -1,81 +1,35 @@
-# Interactively select a zoxide directory and copy its path to the clipboard.
-export def copy-zoxide-path [] {
-  zoxide query -i | str trim | wl-copy
-}
-
-# Open the PhD library in Neovim.
-export def lib [] {
-  nvim /home/samox/studies/phd/library
-}
-
-# Replace regex matches in one file or recursively across all files.
-export def replace-string [
-  --all (-a)
-  --exclude (-e): string
-  src: string
-  dst: string
-  file?: path
-] {
-  let src = $src | default ""
-  let dst = $dst | default ""
-  let files = if $all { ls **/* | where type == file | get name } else { [$file] }
-  let files = if ($exclude | is-not-empty) { $files | where { |f| not ($f =~ $exclude) } } else { $files }
-  for f in $files {
-    open --raw $f | str replace -a -r $src $dst | save -f $f
+# Search CopyQ history with Rofi.
+export module clipboard {
+  export def pick [] {
+    let selection = (
+      ^copyq eval 'for (i = 0; i < size(); ++i) { var text = str(read(i)).split(String.fromCharCode(10)).join(" ").trim(); if (text) print(i + String.fromCharCode(9) + text + String.fromCharCode(10)); }'
+      | ^rofi -dmenu -i -p Clipboard -display-columns 2 -display-column-separator (char tab)
+      | str trim
+    )
+    if $selection != "" {
+      ^copyq select ($selection | split row (char tab) | first)
+    }
   }
 }
 
-# Mirror the local PhD directory to Google Drive, deleting stale remote files.
-export def sync-phd [] {
-  rclone sync ~/studies/phd gdrive:studies/phd --filter-from ~/studies/phd/.rcloneignore --progress --transfers 8 --checkers 16 --drive-chunk-size 64M
-}
-
-# Update the Neovim flake input and activate the rebuilt NixOS configuration.
-def activate-nvim [] {
-  ^nix flake update nvim-config --flake ~/.config/nixos
-  sudo nixos-rebuild switch --flake ~/.config/nixos
-}
-
-# Clone repositories needed by local maintenance commands.
-export module init {
-  # Clone the editable Neovim config used by `s update nvim`.
-  export def nvim [] {
+# Manage the editable Neovim configuration.
+export module nvim {
+  # Clone the repository used by `s nvim update`.
+  export def init [] {
     let repo = ($env.HOME | path join repos nvim)
     mkdir ($repo | path dirname)
     ^git clone https://github.com/samox73/nvim $repo
   }
-}
 
-# Rebuild NixOS or restart configured applications.
-export module reload {
-  export def main [] {
-    nix
-    quickshell
-  }
-
-  # Rebuild and activate the current NixOS configuration.
-  export def nix [] {
-    sudo nixos-rebuild switch --flake ~/.config/nixos
-  }
-
-  # Update the Neovim flake input and activate the rebuilt NixOS configuration.
-  export def nvim [] {
-    activate-nvim
-  }
-
-  # Restart Quickshell with the samox configuration.
-  export def quickshell [] {
-    pkill quickshell; qs --daemonize -c samox
-  }
-}
-
-# Update application-managed dependencies.
-export module update {
-  # Update Neovim plugins, commit and push lockfile changes, then rebuild NixOS.
-  export def nvim [] {
+  # Commit and push changes, then update Neovim in NixOS.
+  export def update [
+    --update-plugins # Update all Neovim plugins first.
+  ] {
     let repo = ($env.HOME | path join repos nvim)
-    with-env { XDG_CONFIG_HOME: ($env.HOME | path join repos) } {
-      ^nvim --headless '+Lazy! update' +qa
+    if $update_plugins {
+      with-env { XDG_CONFIG_HOME: ($env.HOME | path join repos) } {
+        ^nvim --headless '+Lazy! update' +qa
+      }
     }
 
     ^git -C $repo add .
@@ -87,22 +41,74 @@ export module update {
     }
 
     ^git -C $repo push
-    activate-nvim
+    ^nix flake update nvim-config --flake ~/.config/nixos
+    sudo nixos-rebuild switch --flake ~/.config/nixos
   }
 }
 
-# Recover user services from known failure states.
-export module fix {
-  # Stop a wedged clipboard watcher, disabling history recording.
-  export def clipboard [] {
-    do -i { ^pkill -f "wl-paste --type text/plain --watch" }
-    print "clipboard watcher killed (history recording is now off)"
+# Manage the current NixOS configuration.
+export module nix {
+  # Rebuild and activate the current NixOS configuration.
+  export def rebuild [] {
+    sudo nixos-rebuild switch --flake ~/.config/nixos
   }
 
-  # Restart clipboard history recording after it was disabled or wedged.
-  export def clipboard-history [] {
-    do -i { ^pkill -f "wl-paste --type text/plain --watch" }
-    ^bash -c "nohup wl-paste --type text/plain --watch clipman store >/dev/null 2>&1 & disown"
-    print "clipboard watcher restarted"
+  # Update every flake input, then rebuild and activate NixOS.
+  export def update [] {
+    ^nix flake update --flake ~/.config/nixos
+    sudo nixos-rebuild switch --flake ~/.config/nixos
+  }
+}
+
+# Manage PhD files.
+export module phd {
+  # Mirror the local directory to Google Drive, deleting stale remote files.
+  export def sync [] {
+    rclone sync ~/studies/phd gdrive:studies/phd --filter-from ~/studies/phd/.rcloneignore --progress --transfers 8 --checkers 16 --drive-chunk-size 64M
+  }
+}
+
+# Manage Quickshell.
+export module quickshell {
+  # Restart Quickshell with the samox configuration.
+  export def reload [] {
+    pkill quickshell; qs --daemonize -c samox
+  }
+}
+
+# Transform strings in files.
+export module string {
+  # Replace regex matches in one file or recursively across all files.
+  export def replace [
+    --all (-a)
+    --exclude (-e): string
+    src: string
+    dst: string
+    file?: path
+  ] {
+    let src = $src | default ""
+    let dst = $dst | default ""
+    let files = if $all { ls **/* | where type == file | get name } else { [$file] }
+    let files = if ($exclude | is-not-empty) { $files | where { |f| not ($f =~ $exclude) } } else { $files }
+    for f in $files {
+      open --raw $f | str replace -a -r $src $dst | save -f $f
+    }
+  }
+}
+
+# Query zoxide paths.
+export module zoxide {
+  # Interactively select a directory and copy its path to the clipboard.
+  export def copy-path [] {
+    ^zoxide query -i | str trim | wl-copy
+  }
+}
+
+# Reload the NixOS configuration and Quickshell together.
+export module system {
+  # Rebuild NixOS, then restart Quickshell.
+  export def reload [] {
+    sudo nixos-rebuild switch --flake ~/.config/nixos
+    pkill quickshell; qs --daemonize -c samox
   }
 }

@@ -185,7 +185,6 @@ in {
         "qs -c samox"
         "mako"
         "mkdir -p /home/samox/gdrive && rclone mount gdrive: /home/samox/gdrive --vfs-cache-mode full"
-        "wl-paste --type text/plain --watch clipman store"
       ];
 
       # Odd workspaces on the primary external display, even workspaces on the
@@ -246,6 +245,11 @@ in {
       };
 
       plugin.hy3.group_inset = 0;
+      plugin.hy3.tabs.colors = {
+        active = "rgba(a7c08040)";
+        active_border = "rgba(a7c080ee)";
+        active_text = "rgb(d3c6aa)";
+      };
 
       # Stop Hyprland from upscaling XWayland apps (e.g. Android emulator);
       # they manage their own DPI.
@@ -297,10 +301,10 @@ in {
         "$mod, Q, Close active window, hy3:killactive,"
 
         # Focus
-        "$mod, h, Focus left, hy3:movefocus, l"
-        "$mod, j, Focus down, hy3:movefocus, d"
-        "$mod, k, Focus up, hy3:movefocus, u"
-        "$mod, l, Focus right, hy3:movefocus, r"
+        "$mod, h, Focus left, hy3:movefocus, l, visible"
+        "$mod, j, Focus down, hy3:movefocus, d, visible"
+        "$mod, k, Focus up, hy3:movefocus, u, visible"
+        "$mod, l, Focus right, hy3:movefocus, r, visible"
         "$mod, period, Focus next monitor, focusmonitor, +1"
         "$mod, comma, Focus previous monitor, focusmonitor, -1"
         "$mod SHIFT, period, Move window to next monitor, movewindow, mon:+1"
@@ -375,7 +379,7 @@ in {
         "$mod, c, Copy region screenshot, exec, hyprshot -m region --clipboard-only"
 
         # Clipboard manager
-        "CTRL SHIFT ALT, c, Search clipboard history, exec, clipman pick -t rofi --tool-args='-i'"
+        "CTRL SHIFT ALT, c, Search clipboard history, exec, nu --config /home/samox/.config/nixos/configs/nushell/config.nu -c 's clipboard pick'"
 
         # Lock screen
         "CTRL SHIFT, F8, Lock screen, exec, hyprlock"
