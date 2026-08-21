@@ -1374,7 +1374,10 @@ ShellRoot {
                     const tabTop = half;
                     const tabRadius = popup.tabButton.radius;
                     const bodyRadius = 10;
-                    const shoulder = popup.shoulder;
+                    const leftShoulder = Math.min(popup.shoulder,
+                        Math.max(0, tabLeft - left - bodyRadius));
+                    const rightShoulder = Math.min(popup.shoulder,
+                        Math.max(0, right - bodyRadius - tabRight));
 
                     ctx.clearRect(0, 0, width, height);
                     ctx.fillStyle = "#2d353b";
@@ -1382,14 +1385,14 @@ ShellRoot {
                     ctx.beginPath();
                     ctx.moveTo(left, top + bodyRadius);
                     ctx.quadraticCurveTo(left, top, left + bodyRadius, top);
-                    ctx.lineTo(tabLeft - shoulder, top);
-                    ctx.quadraticCurveTo(tabLeft, top, tabLeft, top - shoulder);
+                    ctx.lineTo(tabLeft - leftShoulder, top);
+                    ctx.quadraticCurveTo(tabLeft, top, tabLeft, top - leftShoulder);
                     ctx.lineTo(tabLeft, tabTop + tabRadius);
                     ctx.quadraticCurveTo(tabLeft, tabTop, tabLeft + tabRadius, tabTop);
                     ctx.lineTo(tabRight - tabRadius, tabTop);
                     ctx.quadraticCurveTo(tabRight, tabTop, tabRight, tabTop + tabRadius);
-                    ctx.lineTo(tabRight, top - shoulder);
-                    ctx.quadraticCurveTo(tabRight, top, tabRight + shoulder, top);
+                    ctx.lineTo(tabRight, top - rightShoulder);
+                    ctx.quadraticCurveTo(tabRight, top, tabRight + rightShoulder, top);
                     ctx.lineTo(right - bodyRadius, top);
                     ctx.quadraticCurveTo(right, top, right, top + bodyRadius);
                     ctx.lineTo(right, bottom - bodyRadius);

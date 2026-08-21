@@ -376,7 +376,7 @@ in {
         "$mod, i, Open university Firefox, exec, firefox -P uni"
         "$mod SHIFT, i, Open private Firefox, exec, firefox -P private"
         "$mod, f, Pick screen color, exec, hyprpicker -a"
-        "$mod, c, Copy region screenshot, exec, hyprshot -m region --clipboard-only"
+        "$mod, c, Copy region screenshot, exec, hyprshot -z -m region --clipboard-only"
 
         # Clipboard manager
         "CTRL SHIFT ALT, c, Search clipboard history, exec, nu --config /home/samox/.config/nixos/configs/nushell/config.nu -c 's clipboard pick'"
