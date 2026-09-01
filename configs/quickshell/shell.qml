@@ -3,7 +3,6 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Io
-import Quickshell.Networking
 import Quickshell.Services.Mpris
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
@@ -19,6 +18,13 @@ ShellRoot {
     property var weather: ({ temperature: "--", feelsLike: "--", description: "Unavailable", humidity: "--", wind: "--" })
     property var forecast: []
     property string weatherText: "Vienna: --"
+    property var activeNetwork: null
+    property string networkIp: "--"
+    property var wifiNetworks: []
+    property bool wifiEnabled: false
+    property bool wifiHardwareEnabled: false
+    property bool wifiToggleTarget: false
+    property string wifiScanError: ""
     property bool shortcutOverlayVisible: false
     property bool shortcutSearchActive: false
     property string shortcutSearch: ""
@@ -75,6 +81,77 @@ ShellRoot {
             console.warn(`Invalid weather report: ${error}`);
         }
     }
+
+    function splitNmcli(line): var {
+        const fields = [""];
+        let escaped = false;
+        for (const character of line) {
+            if (escaped) {
+                fields[fields.length - 1] += character;
+                escaped = false;
+            } else if (character === "\\") {
+                escaped = true;
+            } else if (character === ":") {
+                fields.push("");
+            } else {
+                fields[fields.length - 1] += character;
+            }
+        }
+        if (escaped)
+            fields[fields.length - 1] += "\\";
+        return fields;
+    }
+
+    function updateNetworkStatus(data): void {
+        const connections = data.trim().split("\n").filter(line => line !== "")
+            .map(splitNmcli).filter(fields => ["802-11-wireless", "802-3-ethernet"].includes(fields[1]));
+        const connection = connections.find(fields => fields[1] === "802-11-wireless") ?? connections[0];
+        activeNetwork = connection === undefined ? null : {
+            name: connection[0],
+            wifi: connection[1] === "802-11-wireless",
+            device: connection[2]
+        };
+        networkIp = "--";
+        if (activeNetwork !== null)
+            networkIpProcess.exec(["nmcli", "-g", "IP4.ADDRESS", "device", "show", activeNetwork.device]);
+    }
+
+    function updateWifiNetworks(data): void {
+        const strongest = {};
+        for (const line of data.trim().split("\n")) {
+            const fields = splitNmcli(line);
+            if (fields.length < 4 || fields[1] === "")
+                continue;
+            const network = {
+                connected: fields[0] === "*",
+                name: fields[1],
+                signal: Number(fields[2]),
+                security: fields[3]
+            };
+            const key = `$${network.name}`;
+            if (strongest[key] === undefined || network.connected
+                || network.signal > strongest[key].signal)
+                strongest[key] = network;
+        }
+        wifiNetworks = Object.values(strongest).sort((a, b) =>
+            Number(b.connected) - Number(a.connected) || b.signal - a.signal);
+    }
+
+    function refreshNetwork(): void {
+        if (!networkStatusProcess.running)
+            networkStatusProcess.running = true;
+        if (!networkRadioProcess.running)
+            networkRadioProcess.running = true;
+    }
+
+    function scanWifi(): void {
+        wifiScanError = "";
+        if (!wifiScanProcess.running)
+            wifiScanProcess.running = true;
+    }
+
+    Component.onCompleted: console.assert(splitNmcli("a\\:b:c\\\\d").join("|") === "a:b|c\\d",
+        "nmcli field parser is broken")
 
     function formatDuration(seconds): string {
         if (seconds <= 0)
@@ -210,6 +287,69 @@ ShellRoot {
         }
     }
 
+    Process {
+        id: networkStatusProcess
+        running: true
+        command: ["nmcli", "-t", "--escape", "yes", "-f", "NAME,TYPE,DEVICE",
+            "connection", "show", "--active"]
+        stdout: StdioCollector {
+            onStreamFinished: root.updateNetworkStatus(text)
+        }
+    }
+
+    Process {
+        id: networkIpProcess
+        stdout: StdioCollector {
+            onStreamFinished: root.networkIp = text.trim().split("\n")[0].split("/")[0] || "--"
+        }
+    }
+
+    Process {
+        id: networkRadioProcess
+        running: true
+        command: ["nmcli", "-t", "-f", "WIFI,WIFI-HW", "radio"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const state = text.trim().split(":");
+                root.wifiEnabled = state[0] === "enabled";
+                root.wifiHardwareEnabled = state[1] === "enabled";
+            }
+        }
+    }
+
+    Process {
+        id: wifiScanProcess
+        command: ["nmcli", "-t", "--escape", "yes", "-f", "IN-USE,SSID,SIGNAL,SECURITY",
+            "device", "wifi", "list", "--rescan", "yes"]
+        stdout: StdioCollector {
+            onStreamFinished: root.updateWifiNetworks(text)
+        }
+        stderr: StdioCollector { id: wifiScanStderr }
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0)
+                root.wifiScanError = wifiScanStderr.text.trim();
+        }
+    }
+
+    Process {
+        running: true
+        command: ["nmcli", "monitor"]
+        stdout: SplitParser {
+            onRead: root.refreshNetwork()
+        }
+    }
+
+    Process {
+        id: wifiToggleProcess
+        onExited: (exitCode, exitStatus) => {
+            root.refreshNetwork();
+            if (exitCode === 0 && root.wifiToggleTarget)
+                root.scanWifi();
+            else if (exitCode === 0)
+                root.wifiNetworks = [];
+        }
+    }
+
     IpcHandler {
         target: "shortcuts"
         function toggle(): void { root.toggleShortcutOverlay(); }
@@ -241,14 +381,12 @@ ShellRoot {
                     .sort((a, b) => a.name.localeCompare(b.name))
             readonly property int connectedBluetoothDevices: pairedBluetoothDevices
                 .filter(device => device.connected).length
-            readonly property var activeNetwork: connectedNetwork()
-            property string networkIp: "--"
-
-            onActiveNetworkChanged: {
-                networkIp = "--";
-                if (networkPopup.visible && activeNetwork !== null)
-                    networkIpProcess.running = true;
-            }
+            property var pendingWifiNetwork: null
+            property var connectingWifiNetwork: null
+            property string wifiPassword: ""
+            property string wifiConnectPassword: ""
+            property bool wifiPasswordAttempt: false
+            property string networkError: ""
 
             screen: modelData
             color: "transparent"
@@ -272,14 +410,28 @@ ShellRoot {
                 Region { item: rightIsland }
             }
 
-            function connectedNetwork(): var {
-                for (const device of Networking.devices.values) {
-                    for (const network of device.networks.values) {
-                        if (network.connected)
-                            return network;
-                    }
-                }
-                return null;
+            function isPersonalWifi(network): bool {
+                return !network.security.includes("802.1X")
+                    && (network.security.includes("WPA") || network.security.includes("SAE"));
+            }
+
+            function connectWifi(network): void {
+                networkError = "";
+                connectingWifiNetwork = network;
+                wifiPasswordAttempt = false;
+                wifiConnectProcess.exec(["nmcli", "--wait", "20", "device", "wifi", "connect", network.name]);
+            }
+
+            function submitWifiPassword(): void {
+                if (pendingWifiNetwork === null || wifiPassword === "")
+                    return;
+                connectingWifiNetwork = pendingWifiNetwork;
+                wifiConnectPassword = wifiPassword;
+                wifiPasswordAttempt = true;
+                pendingWifiNetwork = null;
+                networkError = "";
+                wifiConnectProcess.exec(["nmcli", "--ask", "--wait", "20", "device", "wifi",
+                    "connect", connectingWifiNetwork.name]);
             }
 
             function closePopups(): void {
@@ -300,12 +452,47 @@ ShellRoot {
             }
 
             Process {
-                id: networkIpProcess
-                command: bar.activeNetwork === null
-                    ? ["true"]
-                    : ["nmcli", "-g", "IP4.ADDRESS", "device", "show", bar.activeNetwork.device.name]
-                stdout: StdioCollector {
-                    onStreamFinished: bar.networkIp = text.trim().split("\n")[0].split("/")[0] || "--"
+                id: wifiConnectProcess
+                stdinEnabled: true
+                stdout: StdioCollector {}
+                stderr: StdioCollector { id: wifiConnectStderr }
+                onStarted: {
+                    if (bar.wifiPasswordAttempt) {
+                        write(`${bar.wifiConnectPassword}\n`);
+                        bar.wifiConnectPassword = "";
+                        bar.wifiPassword = "";
+                    }
+                }
+                onExited: (exitCode, exitStatus) => {
+                    if (exitCode === 0) {
+                        bar.pendingWifiNetwork = null;
+                        bar.networkError = "";
+                        root.refreshNetwork();
+                        root.scanWifi();
+                    } else if (bar.connectingWifiNetwork !== null
+                        && bar.isPersonalWifi(bar.connectingWifiNetwork)) {
+                        bar.pendingWifiNetwork = bar.connectingWifiNetwork;
+                        bar.networkError = bar.wifiPasswordAttempt
+                            ? wifiConnectStderr.text.trim() || "Incorrect password."
+                            : "Password required.";
+                        Qt.callLater(() => wifiPasswordField.forceActiveFocus());
+                    } else {
+                        bar.networkError = wifiConnectStderr.text.trim() || "Could not connect.";
+                    }
+                    bar.connectingWifiNetwork = null;
+                    bar.wifiPasswordAttempt = false;
+                    bar.wifiConnectPassword = "";
+                }
+            }
+
+            Connections {
+                target: networkPopup
+                function onVisibleChanged(): void {
+                    if (!networkPopup.visible) {
+                        bar.pendingWifiNetwork = null;
+                        bar.wifiPassword = "";
+                        bar.networkError = "";
+                    }
                 }
             }
 
@@ -354,9 +541,9 @@ ShellRoot {
 
                     BarButton {
                         id: networkButton
-                        text: bar.activeNetwork === null
+                        text: root.activeNetwork === null
                             ? "󰖪 Disconnected"
-                            : `${bar.activeNetwork.device.type === DeviceType.Wifi ? "󰖩" : "󰈀"} ${bar.activeNetwork.name}`
+                            : `${root.activeNetwork.wifi ? "󰖩" : "󰈀"} ${root.activeNetwork.name}`
                         active: networkPopup.visible
                         onClicked: bar.togglePopup(networkPopup)
                     }
@@ -472,8 +659,8 @@ ShellRoot {
                 barWindow: bar
                 tabButton: networkButton
                 tabXInBar: leftIsland.x + leftContent.x + networkButton.x
-                implicitWidth: 340
-                bodyHeight: networkPopupLayout.implicitHeight + 34
+                implicitWidth: 380
+                bodyHeight: 430
 
                 Column {
                     id: networkPopupLayout
@@ -481,34 +668,173 @@ ShellRoot {
                     anchors.margins: 16
                     spacing: 10
 
+                    Row {
+                        width: parent.width
+                        spacing: 8
+
                         BarText {
-                            text: bar.activeNetwork === null ? "Network: Disconnected" : bar.activeNetwork.name
+                            width: parent.width - wifiToggle.width - parent.spacing
+                            text: root.activeNetwork === null
+                                ? "Network: Disconnected"
+                                : `${root.activeNetwork.name} · ${root.networkIp}`
                             font.bold: true
+                            elide: Text.ElideRight
+                        }
+
+                        ActionButton {
+                            id: wifiToggle
+                            width: 86
+                            enabled: root.wifiHardwareEnabled && !wifiToggleProcess.running
+                            text: root.wifiEnabled ? "Wi-Fi off" : "Wi-Fi on"
+                            onClicked: {
+                                root.wifiToggleTarget = !root.wifiEnabled;
+                                wifiToggleProcess.exec(["nmcli", "radio", "wifi",
+                                    root.wifiToggleTarget ? "on" : "off"]);
+                            }
+                        }
+                    }
+
+                    BarText {
+                        visible: bar.networkError !== "" || root.wifiScanError !== ""
+                        width: parent.width
+                        text: bar.networkError || root.wifiScanError
+                        color: "#e67e80"
+                        wrapMode: Text.Wrap
+                    }
+
+                    ListView {
+                        width: parent.width
+                        height: bar.pendingWifiNetwork === null ? 250 : 168
+                        clip: true
+                        model: ScriptModel { values: root.wifiNetworks }
+
+                        delegate: Rectangle {
+                            id: wifiRow
+                            required property var modelData
+                            width: ListView.view.width
+                            height: 40
+                            radius: 8
+                            color: wifiMouse.containsMouse ? "#3d484d" : "#003d484d"
+
+                            BarText {
+                                anchors.left: parent.left
+                                anchors.right: wifiAction.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.leftMargin: 8
+                                anchors.rightMargin: 10
+                                text: `${modelData.security === "--" ? "" : "󰌾 "}${modelData.name}`
+                                elide: Text.ElideRight
+                            }
+
+                            BarText {
+                                id: wifiAction
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.rightMargin: 8
+                                text: modelData.connected ? "Connected"
+                                    : bar.connectingWifiNetwork !== null
+                                        && bar.connectingWifiNetwork.name === modelData.name ? "Connecting…"
+                                    : `${modelData.signal}%`
+                                color: modelData.connected ? "#a7c080" : "#d3c6aa"
+                            }
+
+                            MouseArea {
+                                id: wifiMouse
+                                anchors.fill: parent
+                                enabled: !wifiRow.modelData.connected && bar.connectingWifiNetwork === null
+                                hoverEnabled: true
+                                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                onClicked: bar.connectWifi(wifiRow.modelData)
+                            }
+                        }
+
+                        BarText {
+                            anchors.centerIn: parent
+                            visible: root.wifiNetworks.length === 0
+                            text: !root.wifiHardwareEnabled ? "No Wi-Fi adapter"
+                                : root.wifiEnabled ? "Scanning…" : "Wi-Fi is off"
+                            color: "#859289"
+                        }
+                    }
+
+                    Column {
+                        width: parent.width
+                        spacing: 8
+                        visible: bar.pendingWifiNetwork !== null
+
+                        BarText {
+                            text: `Password for ${bar.pendingWifiNetwork === null ? "" : bar.pendingWifiNetwork.name}`
                             elide: Text.ElideRight
                             width: parent.width
                         }
 
-                        BarText {
-                            text: `Type ${bar.activeNetwork === null ? "--"
-                                : bar.activeNetwork.device.type === DeviceType.Wifi ? "Wi-Fi" : "Ethernet"}`
-                        }
-                        BarText {
-                            text: `Signal ${bar.activeNetwork === null || bar.activeNetwork.device.type !== DeviceType.Wifi
-                                ? "--" : `${Math.round(bar.activeNetwork.signalStrength * 100)}%`}`
-                        }
-                        BarText { text: `IP ${bar.networkIp}` }
-
-                        ActionButton {
+                        TextField {
+                            id: wifiPasswordField
                             width: parent.width
-                            text: "Open NetworkManager settings"
-                            onClicked: {
-                                networkPopup.visible = false;
-                                Quickshell.execDetached(["nm-connection-editor"]);
+                            height: 34
+                            leftPadding: 12
+                            rightPadding: 12
+                            echoMode: TextInput.Password
+                            passwordCharacter: "●"
+                            placeholderText: "Wi-Fi password"
+                            text: bar.wifiPassword
+                            color: "#d3c6aa"
+                            placeholderTextColor: "#859289"
+                            selectionColor: "#a7c080"
+                            selectedTextColor: "#2d353b"
+                            font.family: "JetBrainsMonoNL Nerd Font Mono"
+                            font.pixelSize: 13
+                            onTextEdited: bar.wifiPassword = text
+                            onAccepted: bar.submitWifiPassword()
+
+                            background: Rectangle {
+                                radius: 8
+                                color: "#232a2e"
+                                border.color: "#a7c080"
+                                border.width: 1
                             }
                         }
+
+                        Row {
+                            width: parent.width
+                            spacing: 8
+
+                            ActionButton {
+                                width: (parent.width - parent.spacing) / 2
+                                text: "Cancel"
+                                onClicked: {
+                                    bar.pendingWifiNetwork = null;
+                                    bar.wifiPassword = "";
+                                }
+                            }
+
+                            ActionButton {
+                                width: (parent.width - parent.spacing) / 2
+                                enabled: bar.wifiPassword !== ""
+                                text: "Connect"
+                                onClicked: bar.submitWifiPassword()
+                            }
+                        }
+                    }
+
+                    ActionButton {
+                        width: parent.width
+                        text: "Open NetworkManager settings"
+                        onClicked: {
+                            networkPopup.visible = false;
+                            Quickshell.execDetached(["nm-connection-editor"]);
+                        }
+                    }
                 }
 
-                onOpened: if (bar.activeNetwork !== null) networkIpProcess.running = true
+                onOpened: {
+                    bar.pendingWifiNetwork = null;
+                    bar.wifiPassword = "";
+                    bar.networkError = "";
+                    root.refreshNetwork();
+                    if (root.wifiEnabled)
+                        root.scanWifi();
+                }
             }
 
             AttachedPopup {

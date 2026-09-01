@@ -5,6 +5,24 @@ alias ll = ls
 alias l = ls
 def nf [] { let file = (fzf --preview 'bat --color=always --style=numbers {}' | str trim); if $file != "" { nvim $file } }
 
+def "nu-complete claude accounts" [] { ["uni" "private"] }
+
+def --wrapped c [account?: string@"nu-complete claude accounts", ...args] {
+  let account = if $account == null {
+    ["uni" "private"] | str join (char nl) | fzf --height 5 --reverse --prompt "Claude account> " | str trim
+  } else {
+    $account
+  }
+
+  if $account == "" { return }
+  if $account not-in ["uni" "private"] {
+    error make { msg: $"unknown Claude account: ($account)" }
+  }
+
+  let config_dir = if $account == "private" { "~/.claude" } else { "~/.claude-uni" }
+  with-env { CLAUDE_CONFIG_DIR: ($config_dir | path expand) } { claude ...$args }
+}
+
 $env.config.keybindings ++= [{
   name: fuzzy_file
   modifier: control

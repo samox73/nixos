@@ -13,7 +13,7 @@ in {
     settings = {
       background = [{
         monitor = "";
-        path = "${../assets/wallpapers/stary-night-galaxy-car-everforest-dark-medium-cropped.jpg}";
+        path = "${../assets/wallpapers/greeting-deer-everforest-dark-medium-neutral-mix-0-8.jpg}";
         blur_passes = 0;
         contrast = 0.8916;
         brightness = 0.8916;
@@ -140,7 +140,7 @@ in {
       splash = false;
       wallpaper = [{
         monitor = "";
-        path = "${../assets/wallpapers/stary-night-galaxy-car-everforest-dark-medium-cropped.jpg}";
+        path = "${../assets/wallpapers/greeting-deer-everforest-dark-medium-neutral-mix-0-8.jpg}";
         fit_mode = "cover";
       }];
     };
@@ -161,7 +161,86 @@ in {
     enable = true;
     configType = "hyprlang";
     package = pkgs.hyprland;
-    plugins = [ pkgs.hyprlandPlugins.hy3 ];
+    plugins = [
+      (pkgs.hyprlandPlugins.hy3.overrideAttrs (old: {
+        patches = (old.patches or []) ++ [
+          (pkgs.writeText "hy3-advanced-tab-padding.patch" ''
+            diff --git a/src/TabGroup.cpp b/src/TabGroup.cpp
+            index 0f9ffaf..dec7820 100644
+            --- a/src/TabGroup.cpp
+            +++ b/src/TabGroup.cpp
+            @@ -50,6 +50,15 @@ CHyprColor merge_colors(Args... colors) {
+              	return CHyprColor(Hyprgraphics::CColor(oklab), alpha);
+             }
+
+            +constexpr std::pair<double, double>
+            +tab_entry_geometry(double group_width, double padding, bool outer, double offset, double width) {
+            +	if (outer) return {offset * group_width + padding * 0.5, width * group_width - padding};
+            +	return {offset * (group_width + padding), width * (group_width + padding) - padding};
+            +}
+            +
+            +static_assert(tab_entry_geometry(100, 20, false, 0.0, 0.25) == std::pair {0.0, 10.0});
+            +static_assert(tab_entry_geometry(100, 20, false, 0.75, 0.25) == std::pair {90.0, 10.0});
+            +
+             Hy3TabBarEntry::Hy3TabBarEntry(Hy3TabBar& tab_bar, Hy3Node& node): tab_bar(tab_bar), node(&node) {
+              	g_pAnimationManager->createAnimation(
+              	    0.0F,
+            @@ -737,6 +746,9 @@ void Hy3TabGroup::renderTabBar() {
+             	static const auto window_rounding = CConfigValue<Config::INTEGER>("decoration:rounding");
+             	static const auto enter_from_top = CConfigValue<Config::INTEGER>("plugin:hy3:tabs:from_top");
+             	static const auto padding = CConfigValue<Config::INTEGER>("plugin:hy3:tabs:padding");
+            +	static const auto padding_horizontal =
+            +	    CConfigValue<Config::INTEGER>("plugin:hy3:tabs:padding_horizontal");
+            +	static const auto padding_outer = CConfigValue<Config::INTEGER>("plugin:hy3:tabs:padding_outer");
+
+             	auto [box, scaledBox] = this->getRenderBB();
+
+            @@ -817,15 +829,26 @@ void Hy3TabGroup::renderTabBar() {
+
+             	auto fade_opacity = this->bar.fade_opacity->value()
+             	                  * (valid(this->workspace) ? this->workspace->m_alpha->value() : 1.0);
+            +	auto horizontal_padding = *padding_horizontal < 0 ? *padding : *padding_horizontal;
+
+             	auto render_entry = [&](Hy3TabBarEntry& entry) {
+            +		auto [entry_x, entry_width] = tab_entry_geometry(
+            +		    box.w,
+            +		    horizontal_padding,
+            +		    *padding_outer,
+            +		    entry.offset->value(),
+            +		    entry.width->value()
+            +		);
+             		Vector2D entry_pos = {
+            -		    (box.x + (entry.offset->value() * box.w) + (*padding * 0.5)) * scale,
+            +		    (box.x + entry_x) * scale,
+             		    scaledBox.y
+             		        + ((entry.vertical_pos->value() * (box.h + *padding) * scale)
+             		           * (*enter_from_top ? -1 : 1)),
+             		};
+            -		Vector2D entry_size = {((entry.width->value() * box.w) - *padding) * scale, scaledBox.h};
+            +		Vector2D entry_size = {
+            +		    entry_width * scale,
+            +		    scaledBox.h,
+            +		};
+             		if (entry_size.x < 0 || entry_size.y < 0 || fade_opacity == 0.0) return;
+
+             		CBox box = {
+            diff --git a/src/main.cpp b/src/main.cpp
+            index e94689e..88548d4 100644
+            --- a/src/main.cpp
+            +++ b/src/main.cpp
+            @@ -42,6 +42,8 @@ APICALL EXPORT PLUGIN_DESCRIPTION_INFO PLUGIN_INIT(HANDLE handle) {
+             	// tabs
+             	CONF("tabs:height", Int, 22);
+             	CONF("tabs:padding", Int, 5);
+            +	CONF("tabs:padding_horizontal", Int, -1);
+            +	CONF("tabs:padding_outer", Bool, true);
+             	CONF("tabs:from_top", Bool, false);
+             	CONF("tabs:radius", Int, 6);
+             	CONF("tabs:border_width", Int, 2);
+          '')
+        ];
+      }))
+    ];
     systemd.enable = false;
     settings = {
       # Monitor configuration
@@ -240,15 +319,24 @@ in {
         gaps_out = 10;
         border_size = 1;
         "col.active_border" = "rgb(dce6cc)";
-        "col.inactive_border" = "rgb(556a35)";
+        "col.inactive_border" = "rgb(7a8478)";
         layout = "hy3";
       };
 
-      plugin.hy3.group_inset = 0;
-      plugin.hy3.tabs.colors = {
-        active = "rgba(a7c08040)";
-        active_border = "rgba(a7c080ee)";
-        active_text = "rgb(d3c6aa)";
+      plugin.hy3 = {
+        group_inset = 0;
+        tabs.border_width = 1;
+        tabs.padding_horizontal = 5;
+        tabs.padding_outer = false;
+        tabs.radius = 10;
+        tabs.colors = {
+          active = "rgba(343f44a0)";
+          active_border = "rgb(dce6cc)";
+          active_text = "rgb(d3c6aa)";
+          inactive = "rgba(2d353b70)";
+          inactive_border = "rgb(7a8478)";
+          inactive_text = "rgb(d3c6aa)";
+        };
       };
 
       # Stop Hyprland from upscaling XWayland apps (e.g. Android emulator);
@@ -260,6 +348,10 @@ in {
       # Decoration
       decoration = {
         rounding = 10;
+        blur = {
+          size = 12;
+          passes = 2;
+        };
       };
 
       # Group bar

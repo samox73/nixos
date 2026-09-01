@@ -14,6 +14,15 @@ export module clipboard {
 
 # Manage the editable Neovim configuration.
 export module nvim {
+  export def --wrapped main [...args] {
+    ^nvim ...$args
+  }
+
+  # Launch Neovim with the editable configuration for testing.
+  export def test [...args] {
+    with-env { XDG_CONFIG_HOME: ($env.HOME | path join repos) } { ^nvim ...$args }
+  }
+
   # Clone the repository used by `s nvim update`.
   export def init [] {
     let repo = ($env.HOME | path join repos nvim)
