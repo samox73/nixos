@@ -59,7 +59,7 @@ export module nvim {
 export module nix {
   # Rebuild and activate the current NixOS configuration.
   export def rebuild [] {
-    sudo nixos-rebuild switch --flake ~/.config/nixos
+    nixos-rebuild switch --flake ~/.config/nixos --sudo --no-reexec
   }
 
   # Update every flake input, then rebuild and activate NixOS.

@@ -164,6 +164,7 @@ in {
     plugins = [
       (pkgs.hyprlandPlugins.hy3.overrideAttrs (old: {
         patches = (old.patches or []) ++ [
+          # https://github.com/outfoxxed/hy3/pull/337
           (pkgs.writeText "hy3-advanced-tab-padding.patch" ''
             diff --git a/src/TabGroup.cpp b/src/TabGroup.cpp
             index 0f9ffaf..dec7820 100644
@@ -333,6 +334,9 @@ in {
           active = "rgba(343f44a0)";
           active_border = "rgb(dce6cc)";
           active_text = "rgb(d3c6aa)";
+          focused = "rgba(2d353b70)";
+          focused_border = "rgb(7a8478)";
+          focused_text = "rgb(d3c6aa)";
           inactive = "rgba(2d353b70)";
           inactive_border = "rgb(7a8478)";
           inactive_text = "rgb(d3c6aa)";
@@ -418,13 +422,15 @@ in {
 
         # Launchers
         "$mod, space, Open application launcher, exec, rofi -modi combi -show combi -combi-modi drun,run -no-levenshtein-sort"
+        "$mod, w, Pick window, exec, ~/.config/hypr/window-picker.nu"
+        "$mod CTRL, w, Name active window, exec, ~/.config/hypr/window-picker.nu name"
 
         # Shortcut help
         "$mod, slash, Show shortcut help, exec, qs -c samox ipc call shortcuts toggle"
 
         # Layout
-        "$mod, b, Create horizontal split, hy3:makegroup, h"
-        "$mod, v, Create vertical split, hy3:makegroup, v"
+        "$mod, b, Create horizontal split, hy3:makegroup, h, toggle"
+        "$mod, v, Create vertical split, hy3:makegroup, v, toggle"
         "$mod, a, Focus parent container, hy3:changefocus, raise"
         "$mod, d, Focus child container, hy3:changefocus, lower"
         "$mod, r, Enter resize mode, submap, resize"

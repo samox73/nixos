@@ -104,7 +104,11 @@ in {
     grim
     gh
     rofi
+
+    # pdf viewers
     sioyek
+    tdf
+
     zotero
     kdePackages.okular
     slurp
@@ -325,6 +329,59 @@ in {
         for win in $windows {
           hyprctl dispatch movetoworkspacesilent $"($target),address:($win.address)"
         }
+      }
+    '';
+  };
+
+  xdg.configFile."hypr/window-picker.nu" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env nu
+
+      def "main name" [] {
+        let window = (hyprctl activewindow -j | from json)
+        if ($window.address | is-empty) { return }
+
+        let result = ("" | rofi -dmenu -p "Window name" | complete)
+        if $result.exit_code != 0 { return }
+
+        for tag in ($window.tags | where { str starts-with "picker:" }) {
+          hyprctl dispatch tagwindow $"-($tag)" $"address:($window.address)"
+        }
+
+        let name = ($result.stdout | str trim)
+        if ($name | is-not-empty) {
+          hyprctl dispatch tagwindow $"+picker:($name | encode base64)" $"address:($window.address)"
+        }
+      }
+
+      def main [] {
+        hyprctl clients -j
+        | from json
+        | where mapped
+        | each { |window|
+            let name = (try {
+              $window.tags
+              | where { str starts-with "picker:" }
+              | first
+              | str substring 7..
+              | decode base64
+              | decode utf-8
+            } catch { "" })
+
+            [
+              $window.address
+              $"[($window.workspace.name)]"
+              ([$name $window.class] | where { is-not-empty } | str join " · ")
+              ($window.title | str replace -a "\n" " ")
+            ] | str join (char tab)
+          }
+        | str join "\n"
+        | rofi -dmenu -i -no-custom -p Windows -display-columns 2,3,4 -display-column-separator (char tab)
+        | str trim
+        | split row (char tab)
+        | first
+        | if ($in | is-not-empty) { hyprctl dispatch focuswindow $"address:($in)" }
       }
     '';
   };
