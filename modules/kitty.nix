@@ -10,6 +10,9 @@
     settings = {
       window_padding_width = 10;
       confirm_os_window_close = 0;
+      # kitty >=0.49 persists the "maximized" xdg state Hyprland gives every tiled window,
+      # then re-requests it on the next launch, covering the whole workspace.
+      remember_window_size = false;
       scrollback_lines = 20000;
       scrollback_pager = "nvim --cmd 'set eventignore=FileType' +'silent autocmd! TrimNvim' +'silent autocmd! TrimHighlight' +'call clearmatches()' +'nnoremap q ZQ' +'call nvim_open_term(0, {})' +'set nomodified nolist' +'$' -";
 
