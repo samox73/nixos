@@ -43,16 +43,18 @@ let
     language = "python";
   });
   phy = pkgs.writeShellScriptBin "phy" ''
+    if [ $# -eq 0 ]; then echo "usage: phy <notebook.ipynb> [...]" >&2; exit 1; fi
     export JUPYTER_PATH="${phyKernel}/share/jupyter''${JUPYTER_PATH:+:$JUPYTER_PATH}"
     exec ${phyPython}/bin/euporie-notebook --kernel-name phy \
       --edit-mode vi \
+      --set-cursor-shape \
       --color-scheme custom \
       --custom-background-color "#2d353b" \
       --custom-foreground-color "#d3c6aa" \
       --accent-color "#a7c080" \
       --syntax-theme zenburn \
       --custom-styles '{"cell input prompt":"fg:#7fbbb3 bold","cell output prompt":"fg:#e69875 bold"}' \
-      "$(mktemp -u --suffix=.ipynb)" "$@"
+      "$@"
   '';
 in {
   imports = [
@@ -476,6 +478,8 @@ in {
 
   home.sessionVariables = {
     GTK_THEME = "Everforest-Dark";
+    # Make the phy kernelspec discoverable outside the phy wrapper (jututui etc.)
+    JUPYTER_PATH = "${phyKernel}/share/jupyter";
     _ZO_FZF_OPTS = "--exact --no-sort --bind=ctrl-z:ignore,btab:up,tab:down --cycle --keep-right --border=sharp --height=20% --info=inline --layout=reverse --tabstop=1 --exit-0 --color=fg:#d3c6aa,bg:#2d353b,hl:#dbbc7f,fg+:#d3c6aa,bg+:#475258,hl+:#dbbc7f,info:#859289,prompt:#a7c080,pointer:#a7c080,marker:#d699b6,spinner:#83c092,header:#7fbbb3,border:#475258";
     ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
     ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
