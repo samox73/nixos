@@ -15,7 +15,7 @@ let
   };
   rustToolchain = pkgs.rust-bin.stable.latest.default.override {
     extensions = [ "rust-src" "rustfmt" "clippy" ];
-    targets = [ "aarch64-linux-android" "x86_64-linux-android" ];
+    targets = [ "aarch64-linux-android" "x86_64-linux-android" "wasm32-unknown-unknown" ];
   };
   # `phy`: a physics scratchpad — euporie-notebook (a rich terminal Jupyter
   # notebook editor) preloaded with numpy/scipy/matplotlib + physical
@@ -195,12 +195,14 @@ in {
     python3Packages.pip
     python3Packages.virtualenv
     pyright      # Python LSP server
+    ruff         # Python formatter, linter, and import sorter
     jetbrains.pycharm
     pkgs-unstable.uv
 
     # Rust development
     rustToolchain
     rust-analyzer  # Rust LSP server
+    wasm-bindgen-cli  # JS bindings for Rust→WASM (version must match the wasm-bindgen crate)
 
     # C++ development tools
     cmake        # build system
