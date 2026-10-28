@@ -267,33 +267,6 @@ in {
         "mkdir -p /home/samox/gdrive && rclone mount gdrive: /home/samox/gdrive --vfs-cache-mode full"
       ];
 
-      # Odd workspaces on the primary external display, even workspaces on the
-      # secondary/internal display. Disconnected workspaces fall back to the
-      # remaining monitor.
-      workspace = if hostname == "alakazam" then [
-        "1, monitor:DP-1"
-        "2, monitor:HDMI-A-1"
-        "3, monitor:DP-1"
-        "4, monitor:HDMI-A-1"
-        "5, monitor:DP-1"
-        "6, monitor:HDMI-A-1"
-        "7, monitor:DP-1"
-        "8, monitor:HDMI-A-1"
-        "9, monitor:DP-1"
-        "10, monitor:HDMI-A-1"
-      ] else [
-        "1, monitor:DP-3"
-        "2, monitor:eDP-1"
-        "3, monitor:DP-3"
-        "4, monitor:eDP-1"
-        "5, monitor:DP-3"
-        "6, monitor:eDP-1"
-        "7, monitor:DP-3"
-        "8, monitor:eDP-1"
-        "9, monitor:DP-3"
-        "10, monitor:eDP-1"
-      ];
-
       # Input configuration
       input = {
         kb_layout = "us";

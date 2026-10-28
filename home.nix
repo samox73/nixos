@@ -325,8 +325,11 @@ in {
         let target = (try { $options | rofi -dmenu -p $"Move WS ($current_ws) →" -i | str trim } catch { "" })
         if $target == "" { return }
 
-        let windows = (hyprctl clients -j | from json | where { $in.workspace.id == $current_ws })
-        for win in $windows {
+        hyprctl dispatch hy3:changefocus top
+        hyprctl dispatch hy3:movetoworkspace $target
+
+        # Move non-hy3 clients such as floating windows left behind by the tree move.
+        for win in (hyprctl clients -j | from json | where { $in.workspace.id == $current_ws }) {
           hyprctl dispatch movetoworkspacesilent $"($target),address:($win.address)"
         }
       }
