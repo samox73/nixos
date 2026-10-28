@@ -312,6 +312,7 @@ in {
       "x-scheme-handler/https" = "firefox.desktop";
       "x-scheme-handler/about" = "firefox.desktop";
       "x-scheme-handler/unknown" = "firefox.desktop";
+      "application/pdf" = "firefox.desktop";
     } // builtins.listToAttrs (map (name: {
       inherit name;
       value = "org.gnome.Loupe.desktop";
@@ -434,6 +435,9 @@ in {
     dark_mode_contrast 0.827
     background_color 0.176 0.208 0.231
     startup_commands toggle_custom_color
+
+    # Ctrl+click: SyncTeX inverse search (jump to the LaTeX source in nvim) instead of a Scholar search
+    control_click_command synctex_under_cursor
 
     # Search engines
     search_url_l https://libgen.li/index.php?req=
