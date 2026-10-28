@@ -20,8 +20,13 @@ def --wrapped c [account?: string@"nu-complete claude accounts", ...args] {
   }
 
   let config_dir = if $account == "private" { "~/.claude" } else { "~/.claude-uni" }
-  with-env { CLAUDE_CONFIG_DIR: ($config_dir | path expand) } { claude ...$args }
+  # every folder in ~/repos/claude-mods holding a plugin manifest, plus standalone mod repos
+  let mods = (glob ~/repos/claude-mods/*/.claude-plugin/plugin.json | each { path dirname | path dirname })
+  let plugin_dirs = ($mods | append ("~/repos/claude-code-latex" | path expand) | str join (char esep))
+  with-env { CLAUDE_CONFIG_DIR: ($config_dir | path expand), CLAUDE_CODE_PLUGIN_DIRS: $plugin_dirs } { claude ...$args }
 }
+
+$env.config.float_precision = 6
 
 $env.config.keybindings ++= [{
   name: fuzzy_file
@@ -56,6 +61,7 @@ extern vim [...files: path@"nu-complete vim files"]
 
 use /home/samox/.config/nixos/data/pokedex
 use /home/samox/.config/nixos/configs/nushell/s.nu
+use /home/samox/studies/phd/repositories/ironmc-ab-initio/nu/ironmc
 use (if ("~/.config/nushell/private/vsc.nu" | path exists) {
   "~/.config/nushell/private/vsc.nu"
 })
