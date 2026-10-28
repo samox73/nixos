@@ -83,6 +83,8 @@ in {
   };
 
   home.packages = with pkgs; [
+    tree
+    melonds
     pkgs-unstable.quickshell
     translate-shell
     chromium
@@ -124,6 +126,7 @@ in {
     brightnessctl
     imagemagick
     loupe
+    mpv
     mcp-nixos
     texliveFull
     networkmanagerapplet  # nm-connection-editor GUI for WPA-Enterprise (eduroam)
@@ -134,9 +137,11 @@ in {
     obs-studio
     audacity             # audio recording from mic and system audio
     slack
+    zoom-us
     pkgs-unstable.everforest-gtk-theme
     everforest-cursors
     jq                   # JSON processing
+    bind.dnsutils        # dig and nslookup
     bitwarden-cli
     oath-toolkit
     litecli
@@ -146,6 +151,7 @@ in {
     gphoto2              # transfer photos from Nikon camera via USB
     nautilus              # GTK file manager
     rclone                # mount Google Drive as local directory
+    sshfs                 # mount VSC output directories over SSH
     vscode               # code editor
     obsidian             # markdown editor
     pandoc               # conversion between document formats
