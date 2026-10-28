@@ -1,4 +1,26 @@
-{ ... }: {
+{ pkgs, ... }: {
+  home.packages = [ pkgs.networkmanager_dmenu ];
+
+  xdg.configFile."networkmanager-dmenu/config.ini".text = ''
+    [dmenu]
+    dmenu_command = rofi -i
+    highlight = True
+    compact = True
+    wifi_chars = ▂▄▆█
+    format = {name}  {sec}  {bars}
+    prompt = Networks
+
+    [dmenu_passphrase]
+    obscure = True
+
+    [editor]
+    gui_if_available = True
+    gui = nm-connection-editor
+
+    [nmdm]
+    rescan_delay = 3
+  '';
+
   xdg.configFile."rofi/config.rasi".text = ''
     configuration {
      timeout {
