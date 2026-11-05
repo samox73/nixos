@@ -159,6 +159,7 @@ in {
     openmpi              # MPI implementation for parallel computing
     openmpi.dev          # MPI headers, mpicc, and pkg-config files for building
     poppler-utils        # PDF command-line tools (pdftotext, pdfinfo, pdftoppm)
+    ghostscript          # gs: PDF to PDF/A conversion
     ntfsprogs            # mkfs.ntfs and other NTFS tools
     gitui
     lazygit
