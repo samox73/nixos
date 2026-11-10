@@ -20,9 +20,8 @@ def --wrapped c [account?: string@"nu-complete claude accounts", ...args] {
   }
 
   let config_dir = if $account == "private" { "~/.claude" } else { "~/.claude-uni" }
-  # every folder in ~/repos/claude-mods holding a plugin manifest, plus standalone mod repos
-  let mods = (glob ~/repos/claude-mods/*/.claude-plugin/plugin.json | each { path dirname | path dirname })
-  let plugin_dirs = ($mods | append ("~/repos/claude-code-latex" | path expand) | str join (char esep))
+  # every folder in ~/repos/claude-mods holding a plugin manifest
+  let plugin_dirs = (glob ~/repos/claude-mods/*/.claude-plugin/plugin.json | each { path dirname | path dirname } | str join (char esep))
   with-env { CLAUDE_CONFIG_DIR: ($config_dir | path expand), CLAUDE_CODE_PLUGIN_DIRS: $plugin_dirs } { claude ...$args }
 }
 

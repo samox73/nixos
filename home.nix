@@ -85,6 +85,7 @@ in {
   home.packages = with pkgs; [
     tree
     melonds
+    prismlauncher        # Minecraft launcher; wrapped with jdk25/21/17 (26.3 needs 25)
     pkgs-unstable.quickshell
     translate-shell
     chromium
@@ -203,6 +204,7 @@ in {
     (python3.withPackages (ps: with ps; [ jupyterlab numpy matplotlib scipy tensorly ]))
     python3Packages.pip
     python3Packages.virtualenv
+    python3Packages.jupytext
     pyright      # Python LSP server
     ruff         # Python formatter, linter, and import sorter
     jetbrains.pycharm
@@ -440,6 +442,9 @@ in {
     # Ctrl+click: SyncTeX inverse search (jump to the LaTeX source in nvim) instead of a Scholar search
     control_click_command synctex_under_cursor
 
+    # Open the current PDF in Firefox (bound in keys_user.config; type `:_f` in the palette: custom commands only list when the typed text starts with `_`)
+    new_command _firefox firefox %{file_path}
+
     # Search engines
     search_url_l https://libgen.li/index.php?req=
     search_url_g https://www.google.com/search?q=
@@ -448,6 +453,7 @@ in {
 
   xdg.configFile."sioyek/keys_user.config".text = ''
     toggle_custom_color <C-<f8>>
+    _firefox <C-A-O>
   '';
 
   xdg.configFile."xournalpp/palette.gpl".text = ''
